@@ -1,0 +1,9 @@
+[package]
+name = "coprocessor-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.1", features = ["derive"] }
+tokio = { version = "1.0", features = ["full"] }
+colored = "2.0"
