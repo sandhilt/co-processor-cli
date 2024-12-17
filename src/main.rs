@@ -41,6 +41,7 @@ enum Commands {
     Carize,
     Register,
     Create {
+        dapp_name: String,
         template: String,
     },
 }
@@ -186,7 +187,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             register_program_with_coprocessor();
             Ok(())
         }
-        Commands::Create { template } => Ok(()),
+        Commands::Create {
+            template,
+            dapp_name,
+        } => {
+            create_template(dapp_name, template);
+            Ok(())
+        }
     }
 }
 
@@ -585,4 +592,66 @@ fn get_machine_hash() -> String {
 
     println!("MACHINE HASH::{}", output.trim().to_string());
     return output.trim().to_string();
+}
+
+fn create_template(dapp_name: String, template: String) {
+    let mut child = Command::new("cartesi")
+        .arg("create")
+        .arg(dapp_name)
+        .arg(format!("--template={}", template))
+        .arg("--branch")
+        .arg("wip/coprocessor")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute 'cartesi create command'");
+
+    let stdout = BufReader::new(child.stdout.take().expect("Failed to capture stdout"));
+    let stderr = BufReader::new(child.stderr.take().expect("Failed to capture stderr"));
+
+    let start = time::Instant::now();
+
+    // Handle output in separate threads
+    thread::spawn(move || {
+        for line in stdout.lines() {
+            if let Ok(line) = line {
+                println!("{} {}", "CARTESI:: ".green(), line.green());
+            }
+        }
+    });
+
+    thread::spawn(move || {
+        for line in stderr.lines() {
+            if let Ok(line) = line {
+                eprintln!("{} {}", "CARTESI::NOTE::".yellow(), line.yellow());
+            } else if let Err(e) = line {
+                eprintln!("{} {}", "CARTESI::ERROR::".red(), e);
+            }
+        }
+    });
+
+    while start.elapsed().as_secs() < 300 {
+        if let Some(status) = child.try_wait().expect("Failed to check process status") {
+            if status.success() {
+                println!(
+                    "{}",
+                    "CARTESI:: Successfully created dapp template.".green()
+                );
+                return;
+            } else {
+                eprintln!("Login process failed.");
+                return;
+            }
+        }
+
+        // Poll every 5 seconds
+        thread::sleep(time::Duration::from_secs(5));
+    }
+
+    // If timeout occurs
+    child
+        .kill()
+        .expect("Failed to terminate the login process.");
+    eprintln!("Login process timed out. Please verify the email within the specified timeout.");
 }
