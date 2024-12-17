@@ -36,6 +36,8 @@ enum Commands {
     /// Upload a CAR file to Web3.Storage
     #[command(about = "Upload a CAR file to Web3.Storage")]
     Upload,
+    Build,
+    carize,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -160,6 +162,18 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             println!("{} CAR file found: {}", "INFO::".green(), car_file);
             upload_car_file(car_file.to_string());
+            Ok(())
+        }
+
+        Commands::Build {} => {
+            println!("Building Cartesi Program...");
+            build_program();
+            Ok(())
+        }
+
+        Commands::carize {} => {
+            println!("Generating Carize file..");
+            run_carize_container();
             Ok(())
         }
     }
@@ -340,4 +354,142 @@ fn upload_car_file(file_path: String) {
     child
         .kill()
         .expect("Failed to terminate the login process.");
+}
+
+fn build_program() {
+    println!("{}", "Building Cartesi Program...".yellow());
+    let mut child = Command::new("cartesi")
+        .arg("build")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute 'cartesi build' command");
+
+    let stdout = BufReader::new(child.stdout.take().expect("Failed to capture stdout"));
+    let stderr = BufReader::new(child.stderr.take().expect("Failed to capture stderr"));
+
+    let start = time::Instant::now();
+
+    thread::spawn(move || {
+        for line in stdout.lines() {
+            match line {
+                Ok(output) => {
+                    println!("{} {}", "CARTESI::".green(), output.green());
+                }
+                Err(e) => eprintln!("Error reading stdout: {}", e),
+            }
+        }
+    });
+
+    thread::spawn(move || {
+        for line in stderr.lines() {
+            match line {
+                Ok(output) => {
+                    println!("{} {}", "CARTESI::".green(), output.red());
+                }
+                Err(e) => eprintln!("Error reading stdout: {}", e),
+            }
+        }
+    });
+
+    // Wait for email verification or timeout
+    while start.elapsed().as_secs() < 300 {
+        if let Some(status) = child.try_wait().expect("Failed to check process status") {
+            if status.success() {
+                println!("{}", "Cartesi Program built successfully.".green());
+                break;
+            } else {
+                eprintln!("{}", "build process failed.".red());
+                break;
+            }
+        }
+
+        // Poll every 5 seconds
+        thread::sleep(time::Duration::from_secs(5));
+    }
+
+    // If timeout occurs
+    child
+        .kill()
+        .expect("Failed to terminate the build process.");
+}
+
+fn run_carize_container() {
+    let current_dir = env::current_dir().expect("Failed to get current directory");
+
+    println!("{}", "Running Cartesi Container...".yellow());
+    let mut child = Command::new("docker")
+        .arg("run")
+        .arg("--rm")
+        .arg("-v")
+        .arg(format!(
+            "{}:/data",
+            current_dir
+                .join(".cartesi/image")
+                .to_str()
+                .expect("failed to convert path to string")
+        ))
+        .arg("-v")
+        .arg(format!(
+            "{}:/output",
+            current_dir
+                .to_str()
+                .expect("Failed to get current directory")
+        ))
+        .arg("carize:latest")
+        .arg("/carize.sh")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute 'cartesi build' command");
+
+    let stdout = BufReader::new(child.stdout.take().expect("Failed to capture stdout"));
+    let stderr = BufReader::new(child.stderr.take().expect("Failed to capture stderr"));
+
+    let start = time::Instant::now();
+
+    thread::spawn(move || {
+        for line in stdout.lines() {
+            match line {
+                Ok(output) => {
+                    println!("{} {}", "CARIZE::".green(), output.green());
+                }
+                Err(e) => eprintln!("Error reading stdout: {}", e),
+            }
+        }
+    });
+
+    thread::spawn(move || {
+        for line in stderr.lines() {
+            match line {
+                Ok(output) => {
+                    println!("{} {}", "CARIZE::".green(), output.red());
+                }
+                Err(e) => eprintln!("Error reading stdout: {}", e),
+            }
+        }
+    });
+
+    // Wait for email verification or timeout
+    while start.elapsed().as_secs() < 300 {
+        if let Some(status) = child.try_wait().expect("Failed to check process status") {
+            if status.success() {
+                println!("{}", "CARIZE generated successfully.".green());
+                break;
+            } else {
+                eprintln!("{}", "car file generation process failed.".red());
+                break;
+            }
+        }
+
+        // Poll every 5 seconds
+        thread::sleep(time::Duration::from_secs(5));
+    }
+
+    // If timeout occurs
+    child
+        .kill()
+        .expect("Failed to terminate the generatioon process.");
 }
