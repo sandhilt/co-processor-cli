@@ -3,6 +3,7 @@ use colored::Colorize;
 use std::env;
 use std::fs;
 use std::io::{BufRead, BufReader};
+use std::path::Path;
 use std::{
     error::Error,
     process::{Command, Stdio},
@@ -37,7 +38,11 @@ enum Commands {
     #[command(about = "Upload a CAR file to Web3.Storage")]
     Upload,
     Build,
-    carize,
+    Carize,
+    Register,
+    Create {
+        template: String,
+    },
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -171,11 +176,17 @@ fn main() -> Result<(), Box<dyn Error>> {
             Ok(())
         }
 
-        Commands::carize {} => {
+        Commands::Carize {} => {
             println!("Generating Carize file..");
             run_carize_container();
             Ok(())
         }
+        Commands::Register {} => {
+            println!("Registering progam with co-processor...");
+            register_program_with_coprocessor();
+            Ok(())
+        }
+        Commands::Create { template } => Ok(()),
     }
 }
 
@@ -492,4 +503,86 @@ fn run_carize_container() {
     child
         .kill()
         .expect("Failed to terminate the generatioon process.");
+}
+
+fn read_file(path: &str, var_name: &str) -> String {
+    if !Path::new(path).exists() {
+        eprintln!(
+            "{} {} file '{}' does not exist.",
+            "Error::".red(),
+            var_name,
+            path
+        );
+        std::process::exit(1);
+    }
+    let content = fs::read_to_string(path)
+        .unwrap_or_else(|_| panic!("Failed to read {} file '{}'", var_name, path));
+    content.trim().to_string()
+}
+
+fn register_program_with_coprocessor() {
+    let current_dir = env::current_dir().expect("Failed to get current directory");
+    let output_cid = current_dir.join("output.cid");
+    let output_size = current_dir.join("output.size");
+
+    let cid = read_file(
+        output_cid
+            .to_str()
+            .expect("error converting path to string"),
+        "CID",
+    );
+    let size = read_file(
+        output_size
+            .to_str()
+            .expect("error converting path to string"),
+        "SIZE",
+    );
+    let machine_hash = get_machine_hash();
+
+    let curl_status = Command::new("curl")
+        .arg("-X")
+        .arg("POST")
+        .arg(format!(
+            "https://cartesi-coprocessor-solver.fly.dev/ensure/{}/{}/{}",
+            cid, machine_hash, size
+        ))
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute curl POST command")
+        .wait_with_output()
+        .expect("Failed to wait for curl command to finish");
+
+    if curl_status.status.success() {
+        println!("{}", "Successfully sent request to co-processor.".green());
+        let stdout = String::from_utf8_lossy(&curl_status.stdout);
+        println!("{} {}", "RESPONSE::".green(), stdout.green());
+    } else {
+        eprintln!("Failed to send POST request.");
+        let stderr = String::from_utf8_lossy(&curl_status.stderr);
+        eprintln!("Error: {}", stderr);
+    }
+}
+
+fn get_machine_hash() -> String {
+    let current_dir = env::current_dir().expect("Failed to get current directory");
+    let image_hash = current_dir.join(".cartesi/image/hash");
+
+    let output = Command::new("xxd")
+        .arg("-p")
+        .arg(image_hash)
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute 'xxd' command")
+        .stdout
+        .expect("Failed to capture xxd output");
+
+    let output = BufReader::new(output)
+        .lines()
+        .map(|line| line.unwrap_or_default())
+        .collect::<Vec<_>>()
+        .concat();
+
+    println!("MACHINE HASH::{}", output.trim().to_string());
+    return output.trim().to_string();
 }
