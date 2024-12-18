@@ -3,7 +3,7 @@ use colored::Colorize;
 use std::env;
 use std::fs;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::{
     error::Error,
     process::{Command, Stdio},
@@ -43,6 +43,9 @@ enum Commands {
     Create {
         dapp_name: String,
         template: String,
+    },
+    bootstrap {
+        dapp_name: String,
     },
 }
 
@@ -194,6 +197,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             create_template(dapp_name, template);
             Ok(())
         }
+        Commands::bootstrap { dapp_name } => {
+            bootstrap_foundry(dapp_name.as_str());
+            Ok(())
+        }
     }
 }
 
@@ -231,7 +238,7 @@ fn check_available_space() -> Vec<String> {
     return available_spaces;
 }
 
-fn set_active_space(space_name: String) -> bool {
+fn set_active_space(space_name: String) {
     let mut child = Command::new("w3")
         .arg("space")
         .arg("use")
@@ -243,6 +250,7 @@ fn set_active_space(space_name: String) -> bool {
         .expect("Failed to execute 'w3 space creation'");
 
     let stdout = BufReader::new(child.stdout.take().expect("Failed to capture stdout"));
+    let stderr = BufReader::new(child.stderr.take().expect("Failed to capture stderr"));
 
     // Collect lines from stdout first
     let lines: Vec<Result<String, std::io::Error>> = stdout.lines().collect();
@@ -252,13 +260,23 @@ fn set_active_space(space_name: String) -> bool {
         if line.is_ok() {
             println!("Switched to space: {}", space_name);
             println!("Space ID: {}", line.unwrap());
-            return true;
+            return;
         } else {
             eprintln!("Failed to switch to space: {}", space_name);
-            return false;
+            return;
         }
     }
-    return false;
+
+    thread::spawn(move || {
+        for line in stderr.lines() {
+            match line {
+                Ok(output) => {
+                    println!("{} {}", "WEB3STORAGE::".red(), output.red());
+                }
+                Err(e) => eprintln!("Error reading stdout: {}", e),
+            }
+        }
+    });
 }
 
 fn create_space(space: String) {
@@ -597,7 +615,7 @@ fn get_machine_hash() -> String {
 fn create_template(dapp_name: String, template: String) {
     let mut child = Command::new("cartesi")
         .arg("create")
-        .arg(dapp_name)
+        .arg(dapp_name.clone())
         .arg(format!("--template={}", template))
         .arg("--branch")
         .arg("wip/coprocessor")
@@ -638,6 +656,7 @@ fn create_template(dapp_name: String, template: String) {
                     "{}",
                     "CARTESI:: Successfully created dapp template.".green()
                 );
+                bootstrap_foundry(&dapp_name);
                 return;
             } else {
                 eprintln!("Login process failed.");
@@ -655,3 +674,130 @@ fn create_template(dapp_name: String, template: String) {
         .expect("Failed to terminate the login process.");
     eprintln!("Login process timed out. Please verify the email within the specified timeout.");
 }
+
+fn bootstrap_foundry(project_name: &str) {
+    // Create the Foundry project directory
+    let current_dir = env::current_dir().expect("Failed to get current directory");
+    let work_dir = current_dir.join(project_name);
+
+    let mut child = Command::new("forge")
+        .arg("init")
+        .arg("contracts")
+        .arg("--no-commit")
+        .current_dir(work_dir.clone())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute 'forge init' command");
+
+    let stdout = BufReader::new(child.stdout.take().expect("Failed to capture stdout"));
+    let stderr = BufReader::new(child.stderr.take().expect("Failed to capture stderr"));
+
+    let start = time::Instant::now();
+
+    // Handle initial output and extract keyphrase
+    thread::spawn(move || {
+        for line in stdout.lines() {
+            if let Ok(line) = line {
+                println!("{} {}", "FORGE:: ".green(), line.green());
+            }
+        }
+        return;
+    });
+
+    thread::spawn(move || {
+        for line in stderr.lines() {
+            if let Ok(line) = line {
+                eprintln!("{} {}", "FORGE::".yellow(), line.yellow());
+            } else if let Err(e) = line {
+                eprintln!("{} {}", "FORGE::ERROR::".red(), e);
+            }
+        }
+    });
+
+    // Wait for email verification or timeout
+    while start.elapsed().as_secs() < 50 {
+        if let Some(status) = child.try_wait().expect("Failed to check process status") {
+            if status.success() {
+                println!("{}", "Successfully initialized foundry project.".green());
+                install_base_contract(&work_dir);
+                break;
+            } else {
+                eprintln!("error initializing a new forge project.");
+                break;
+            }
+        }
+
+        // Poll every 2 seconds
+        thread::sleep(time::Duration::from_secs(2));
+    }
+
+    // If timeout occurs
+    child
+        .kill()
+        .expect("Failed to terminate the foundry project initialization process.");
+}
+
+fn install_base_contract(work_dir: &PathBuf) {
+    let work_dir = work_dir.join("contracts");
+
+    let mut child = Command::new("forge")
+        .arg("install")
+        .arg("https://github.com/Mugen-Builders/coprocessor-base-contract")
+        .arg("--no-commit")
+        .current_dir(work_dir.clone())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute 'forge install' command");
+
+    let stdout = BufReader::new(child.stdout.take().expect("Failed to capture stdout"));
+    let stderr = BufReader::new(child.stderr.take().expect("Failed to capture stderr"));
+
+    let start = time::Instant::now();
+
+    // Handle initial output and extract keyphrase
+    thread::spawn(move || {
+        for line in stdout.lines() {
+            if let Ok(line) = line {
+                println!("{} {}", "FORGE:: ".green(), line.green());
+            }
+        }
+        return;
+    });
+
+    thread::spawn(move || {
+        for line in stderr.lines() {
+            if let Ok(line) = line {
+                eprintln!("{} {}", "FORGE::".yellow(), line.yellow());
+            } else if let Err(e) = line {
+                eprintln!("{} {}", "FORGE::ERROR::".red(), e);
+            }
+        }
+    });
+
+    // Wait for email verification or timeout
+    while start.elapsed().as_secs() < 50 {
+        if let Some(status) = child.try_wait().expect("Failed to check process status") {
+            if status.success() {
+                println!("{}", "Successfully initialized base contract.".green());
+                break;
+            } else {
+                eprintln!("error installing base contract.");
+                break;
+            }
+        }
+
+        // Poll every 2 seconds
+        thread::sleep(time::Duration::from_secs(2));
+    }
+
+    // If timeout occurs
+    child
+        .kill()
+        .expect("Failed to terminate the base contract installation process.");
+}
+
+// fn create_contract_template(work_dir: &PathBuf) {
+
+// }
