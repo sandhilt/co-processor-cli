@@ -93,7 +93,7 @@ fn create_space(space: String) {
     while start.elapsed().as_secs() < 50 {
         if let Some(status) = child.try_wait().expect("Failed to check process status") {
             if status.success() {
-                println!("Successfully created your space.");
+                println!("✅ Successfully created your space.");
                 break;
             } else {
                 eprintln!("space creation process timed out. Please select your payment plan within the specified timeout.");
@@ -143,7 +143,10 @@ fn upload_car_file(file_path: String) -> bool {
     while start.elapsed().as_secs() < 300 {
         if let Some(status) = child.try_wait().expect("Failed to check process status") {
             if status.success() {
-                println!("{}", "Successfully uploaded file to Web3.Storage.".green());
+                println!(
+                    "✅ {}",
+                    "Successfully uploaded file to Web3.Storage.".green()
+                );
                 return true;
             } else {
                 eprintln!("{}", "upload process failed.".red());
@@ -203,7 +206,7 @@ fn build_program() -> bool {
     while start.elapsed().as_secs() < 300 {
         if let Some(status) = child.try_wait().expect("Failed to check process status") {
             if status.success() {
-                println!("{}", "Cartesi Program built successfully.".green());
+                println!("✅ {}", "Cartesi Program built successfully.".green());
                 return true;
             } else {
                 eprintln!("{}", "build process failed.".red());
@@ -283,7 +286,7 @@ fn run_carize_container() -> bool {
     while start.elapsed().as_secs() < 300 {
         if let Some(status) = child.try_wait().expect("Failed to check process status") {
             if status.success() {
-                println!("{}", "CARIZE generated successfully.".green());
+                println!("✅ {}", "CARIZE generated successfully.".green());
                 return true;
             } else {
                 eprintln!("{}", "car file generation process failed.".red());
@@ -336,9 +339,12 @@ fn register_program_with_coprocessor() {
         .expect("Failed to wait for curl command to finish");
 
     if curl_status.status.success() {
-        println!("{}", "Successfully sent request to co-processor.".green());
+        println!(
+            "✅ {}",
+            "Successfully sent request to co-processor.".green()
+        );
         let stdout = String::from_utf8_lossy(&curl_status.stdout);
-        println!("{} {}", "RESPONSE::".green(), stdout.green());
+        println!("✅ {} {}", "RESPONSE::".green(), stdout.green());
     } else {
         eprintln!("Failed to send POST request.");
         let stderr = String::from_utf8_lossy(&curl_status.stderr);
@@ -383,7 +389,7 @@ fn login(email: String) -> bool {
     while start.elapsed().as_secs() < 300 {
         if let Some(status) = child.try_wait().expect("Failed to check process status") {
             if status.success() {
-                println!("Successfully logged in to Web3.Storage.");
+                println!("✅ Successfully logged in to Web3.Storage.");
                 return true;
             } else {
                 eprintln!("Login process timed out. Please verify the email within the specified timeout.");

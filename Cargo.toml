@@ -1,9 +1,21 @@
 [package]
-name = "coprocessor-cli"
+name = "cartesi-coprocessor"
 version = "0.1.0"
+authors = ["Mugen Builders", "Idogwu Chinonso"]
 edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/Mugen-Builders/co-processor-cli"
+description = "A cli tool to simplify bootstrapping, registering and deploying Cartesi co-processor programs"
+readme = "README.md"     
+keywords = ["Cartesi", "Co-processor", "cli", "tool"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "cartesi-coprocessor"
+path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.1", features = ["derive"] }
 tokio = { version = "1.0", features = ["full"] }
 colored = "2.0"
+

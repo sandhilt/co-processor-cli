@@ -11,7 +11,7 @@ fn create_contract_template(work_dir: &PathBuf) {
     let work_dir = work_dir.join("src/MyContract.sol");
 
     match fs::write(work_dir, contract_template) {
-        Ok(_) => println!("{}", "Successfully created contract template.".green(),),
+        Ok(_) => println!("✅ {}", "Successfully created contract template.".green(),),
         Err(e) => eprintln!("Error creating contract template: {}", e),
     };
 }
@@ -58,7 +58,7 @@ fn install_base_contract(work_dir: &PathBuf) {
     while start.elapsed().as_secs() < 50 {
         if let Some(status) = child.try_wait().expect("Failed to check process status") {
             if status.success() {
-                println!("{}", "Successfully initialized base contract.".green());
+                println!("✅ {}", "Successfully initialized base contract.".green());
                 create_contract_template(&work_dir);
                 break;
             } else {
@@ -121,7 +121,7 @@ fn bootstrap_foundry(project_name: &str) {
     while start.elapsed().as_secs() < 50 {
         if let Some(status) = child.try_wait().expect("Failed to check process status") {
             if status.success() {
-                println!("{}", "Successfully initialized foundry project.".green());
+                println!("✅ {}", "Successfully initialized foundry project.".green());
                 install_base_contract(&work_dir);
                 break;
             } else {
@@ -181,7 +181,7 @@ fn create_template(dapp_name: String, template: String) {
         if let Some(status) = child.try_wait().expect("Failed to check process status") {
             if status.success() {
                 println!(
-                    "{}",
+                    "✅ {}",
                     "CARTESI:: Successfully created dapp template.".green()
                 );
                 bootstrap_foundry(&dapp_name);

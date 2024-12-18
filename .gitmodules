@@ -31,3 +31,9 @@
 [submodule "demo_dapp/contracts/lib/coprocessor-base-contract"]
 	path = demo_dapp/contracts/lib/coprocessor-base-contract
 	url = https://github.com/Mugen-Builders/coprocessor-base-contract
+[submodule "demp_dapp/contracts/lib/forge-std"]
+	path = demp_dapp/contracts/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "demp_dapp/contracts/lib/coprocessor-base-contract"]
+	path = demp_dapp/contracts/lib/coprocessor-base-contract
+	url = https://github.com/Mugen-Builders/coprocessor-base-contract
