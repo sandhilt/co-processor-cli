@@ -26,7 +26,7 @@ Clone the repository and build the tool manually:
 
 ```bash
 git clone https://github.com/Mugen-Builders/co-processor-cli
-cd cartesi-cli-tool
+cd co-processor-cli
 cargo install --path .
 ```
 
@@ -35,7 +35,7 @@ cargo install --path .
 Run the CLI tool with:
 
 ```bash
-cartesi-cli [COMMAND] [OPTIONS]
+cartesi-coprocessor [COMMAND] [OPTIONS]
 ```
 
 ### Commands
@@ -45,7 +45,7 @@ cartesi-cli [COMMAND] [OPTIONS]
 Initialize a new Foundry project with Cartesi base contracts:
 
 ```bash
-coprocessor-cli create --dapp-name <project_name> --template <language template>
+cartesi-coprocessor create --dapp-name <project_name> --template <language template>
 ```
 
 #### Register a Co-Processor Program
@@ -53,7 +53,7 @@ coprocessor-cli create --dapp-name <project_name> --template <language template>
 Register your Cartesi co-processor program:
 
 ```bash
-coprocessor-cli register --email <w3 storage account email>
+cartesi-coprocessor register --email <w3 storage account email>
 ```
 
 ## Example Workflow
@@ -61,7 +61,7 @@ coprocessor-cli register --email <w3 storage account email>
 1. **Bootstrap a Project**
 
 ```bash
-coprocessor-cli create --dapp-name my-cartesi-project --template rust
+cartesi-coprocessor create --dapp-name my-cartesi-project --template rust
 cd my-cartesi-project
 ```
 
@@ -71,7 +71,7 @@ cd my-cartesi-project
 3. **Register the Program**
 
 ```bash
-coprocessor-cli register --email test@gmail.com
+cartesi-coprocessor register --email test@gmail.com
 ```
 
 ## Contributing
