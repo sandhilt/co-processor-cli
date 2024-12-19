@@ -7,6 +7,8 @@ use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 use std::{thread, time};
 
+/// @notice Function to set the space where uploaded car files will be saved to
+/// @param space_name The name of the space of choice
 fn set_active_space(space_name: String) {
     let mut child = Command::new("w3")
         .arg("space")
@@ -48,6 +50,8 @@ fn set_active_space(space_name: String) {
     });
 }
 
+/// @notice Function to create a new space for car files upload
+/// @param space The name of the space of choice
 fn create_space(space: String) {
     println!("Creating a new storage space: {}", space);
     let mut child = Command::new("w3")
@@ -90,7 +94,7 @@ fn create_space(space: String) {
     });
 
     // Wait for email verification or timeout
-    while start.elapsed().as_secs() < 50 {
+    while start.elapsed().as_secs() < 300 {
         if let Some(status) = child.try_wait().expect("Failed to check process status") {
             if status.success() {
                 println!("✅ Successfully created your space.");
@@ -111,6 +115,9 @@ fn create_space(space: String) {
         .expect("Failed to terminate the space creation process.");
 }
 
+/// @notice Function to upload a car file to the active space
+/// @param file_path The path to the car file of choice to be uploaded
+/// @returns a boolean value indicating whether or not the execution was successful
 fn upload_car_file(file_path: String) -> bool {
     println!("{}", "Uploading CAR file...".yellow());
 
@@ -165,6 +172,8 @@ fn upload_car_file(file_path: String) -> bool {
     return false;
 }
 
+/// @notice Function to build a Cartesi project before the registration process
+/// @returns a boolean value indicating whether or not the execution was successful
 fn build_program() -> bool {
     println!("{}", "Building Cartesi Program...".yellow());
     let mut child = Command::new("cartesi")
@@ -225,6 +234,8 @@ fn build_program() -> bool {
     return false;
 }
 
+/// @notice Function to run the Carize command to generate car files
+/// @returns a boolean value indicating whether or not the execution was successful
 fn run_carize_container() -> bool {
     let current_dir = env::current_dir().expect("Failed to get current directory");
 
@@ -305,6 +316,7 @@ fn run_carize_container() -> bool {
     return false;
 }
 
+/// @notice Function to call the co-processor task manager to register the machine, hash, grogram cid etc.
 fn register_program_with_coprocessor() {
     let current_dir = env::current_dir().expect("Failed to get current directory");
     let output_cid = current_dir.join("output.cid");
@@ -352,6 +364,9 @@ fn register_program_with_coprocessor() {
     }
 }
 
+/// @notice Function to login into web3 storage
+/// @param email The email address whick is linked or to be linked to web3 storage
+/// @returns a boolean value indicating whether or not the execution was successful
 fn login(email: String) -> bool {
     let mut child = Command::new("w3")
         .arg("login")
@@ -408,6 +423,9 @@ fn login(email: String) -> bool {
     return false;
 }
 
+/// @notice Function to check of web3storage space about to be created already exists
+/// @param space The name of the web3 storage space to be created
+/// @returns a boolean value indicating whether or not the execution was successful
 fn check_and_create_space(space: String) -> bool {
     let available_spaces = check_available_space();
 
@@ -440,6 +458,8 @@ fn check_and_create_space(space: String) -> bool {
     }
 }
 
+/// @notice Function that check if the file to be uploaded exists then if yes, it calls the upload functrion
+/// @returns a boolean value indicating whether or not the execution was successful
 fn check_and_upload() -> bool {
     let car_file_name = "output.car";
     // Get the current directory
@@ -471,6 +491,8 @@ fn check_and_upload() -> bool {
     };
 }
 
+/// @notice Entry point function to chain all the different functions required to register a new program
+/// @param email The email of your choice, to be linked if not already to web3 storage
 pub fn register(email: String) {
     match check_if_logged_in(email.clone()) {
         true => {}

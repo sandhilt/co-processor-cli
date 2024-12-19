@@ -6,6 +6,8 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::{thread, time};
 
+/// @notice Helper Function to check all the required dependencies are installed
+/// @returns a boolean value indicating whether or not all dependencies are installed
 pub fn check_dependencies_installed() -> bool {
     let required_tools = vec!["forge", "w3", "cartesi", "docker", "curl"];
 
@@ -23,6 +25,9 @@ pub fn check_dependencies_installed() -> bool {
     true
 }
 
+/// @notice Internal Function to ensure that a dependency exists
+/// @param tool The name of the tool to check if installed
+/// @returns a Result to tell of the operation was sucessful
 pub fn check_installed(tool: String) -> Result<bool, String> {
     let output = Command::new("which")
         .arg(tool)
@@ -32,6 +37,9 @@ pub fn check_installed(tool: String) -> Result<bool, String> {
     Ok(output.status.success())
 }
 
+/// @notice Function to read the contents of a file
+/// @param path The path to file to be read from
+/// @param var_name: The name of the file to be read from
 pub fn read_file(path: &str, var_name: &str) -> String {
     if !Path::new(path).exists() {
         eprintln!(
@@ -47,6 +55,8 @@ pub fn read_file(path: &str, var_name: &str) -> String {
     content.trim().to_string()
 }
 
+/// @notice Function to get all available spaces
+/// @return a verc of string representing all the available spaces
 pub fn check_available_space() -> Vec<String> {
     let mut child = Command::new("w3")
         .arg("space")
@@ -81,6 +91,9 @@ pub fn check_available_space() -> Vec<String> {
     return available_spaces;
 }
 
+/// @notice Helper Function to check if a particulr email is loged in on w3 storage
+/// @param email the email address to check if logged in
+/// @returns a boolean value indicating whether or not the execution was successfull
 pub fn check_if_logged_in(email: String) -> bool {
     let mut child = Command::new("w3")
         .arg("account")
@@ -147,6 +160,7 @@ pub fn check_if_logged_in(email: String) -> bool {
     return false;
 }
 
+/// @notice Function to get the machine hash
 pub fn get_machine_hash() -> String {
     let current_dir = env::current_dir().expect("Failed to get current directory");
     let image_hash = current_dir.join(".cartesi/image/hash");

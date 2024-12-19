@@ -6,6 +6,8 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{thread, time};
 
+/// @notice Function to create a solidity contract template inheriting the base contract
+/// @param work_dir The path to the foundry project for the dapp
 fn create_contract_template(work_dir: &PathBuf) {
     let contract_template = include_str!("../../contract-template/src/MyContract.sol");
     let work_dir = work_dir.join("src/MyContract.sol");
@@ -16,6 +18,8 @@ fn create_contract_template(work_dir: &PathBuf) {
     };
 }
 
+/// @notice Function to install the base contract as a library in the solidity working directory
+/// @param work_dir The path to the foundry project for the dapp
 fn install_base_contract(work_dir: &PathBuf) {
     let work_dir = work_dir.join("contracts");
 
@@ -77,6 +81,8 @@ fn install_base_contract(work_dir: &PathBuf) {
         .expect("Failed to terminate the base contract installation process.");
 }
 
+/// @notice Function to create a new foundry project
+/// @param project_name The name of the project the name of choice for the project to be created
 fn bootstrap_foundry(project_name: &str) {
     // Create the Foundry project directory
     let current_dir = env::current_dir().expect("Failed to get current directory");
@@ -140,6 +146,9 @@ fn bootstrap_foundry(project_name: &str) {
         .expect("Failed to terminate the foundry project initialization process.");
 }
 
+/// @notice Function to create a new cartesi project template specially for co-processor integrations.
+/// @param dapp_name The name of the project the name of choice for the project to be created
+/// @param template The programming language of choice, you'll be building in
 fn create_template(dapp_name: String, template: String) {
     let mut child = Command::new("cartesi")
         .arg("create")
@@ -203,6 +212,9 @@ fn create_template(dapp_name: String, template: String) {
     eprintln!("Template creation process timed out. Please verify the email within the specified timeout.");
 }
 
+/// @notice Entry point function to chain all the different functions required to create a new dapp template
+/// @param dapp_name The name of the project the name of choice for the project to be created
+/// @param template The programming language of choice, you'll be building in
 pub fn create(dapp_name: String, template: String) {
     create_template(dapp_name, template);
 }
