@@ -10,5 +10,9 @@ contract MyContract is BaseContract {
         callCoprocessor(input);
     }
 
-    // Add your logic here
+    function handleNotice(bytes calldata notice) internal override {
+        // Add logic for handling callback from co-processor containing notices.
+    }
+
+    // Add your other app logic here
 }
