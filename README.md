@@ -30,6 +30,17 @@ cd co-processor-cli
 cargo install --path .
 ```
 
+## Note:
+
+- You need to have all the necessary dependencies installed and running before you can use this tool.
+  - Nonodo.
+  - Docker.
+  - Cartesi machine.
+  - Carize.
+  - W3 (web3 storage CLI).
+  - foundry.
+- You need to clone and build the Carize tool manually also before calling any of the commands.
+
 ## Usage
 
 Run the CLI tool with:
