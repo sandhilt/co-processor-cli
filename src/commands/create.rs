@@ -25,7 +25,7 @@ fn install_base_contract(work_dir: &PathBuf) {
 
     let mut child = Command::new("forge")
         .arg("install")
-        .arg("https://github.com/Mugen-Builders/coprocessor-base-contract@v1.0.1")
+        .arg("https://github.com/Mugen-Builders/coprocessor-base-contract@v2.0.0")
         .arg("--no-commit")
         .current_dir(work_dir.clone())
         .stdout(Stdio::piped())

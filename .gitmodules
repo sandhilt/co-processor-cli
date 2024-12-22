@@ -1,6 +1,8 @@
 [submodule "contract-template/lib/forge-std"]
 	path = contract-template/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+
+
 [submodule "contract-template/lib/coprocessor-base-contract"]
 	path = contract-template/lib/coprocessor-base-contract
 	url = https://github.com/Mugen-Builders/coprocessor-base-contract
