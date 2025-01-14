@@ -2,10 +2,11 @@ use crate::helpers::helpers::{
     check_available_space, check_if_logged_in, get_machine_hash, read_file,
 };
 use colored::Colorize;
+use indicatif::{ProgressBar, ProgressStyle};
 use std::env;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Stderr};
 use std::process::{Command, Stdio};
-use std::{thread, time};
+use std::{thread, time, time::Duration};
 
 /// @notice Function to set the space where uploaded car files will be saved to
 /// @param space_name The name of the space of choice
@@ -119,21 +120,30 @@ fn create_space(space: String) {
 /// @param file_path The path to the car file of choice to be uploaded
 /// @returns a boolean value indicating whether or not the execution was successful
 fn upload_car_file(file_path: String) -> bool {
-    println!("{}", "Uploading CAR file...".yellow());
+    // Create a spinner and set the message
+    let spinner = ProgressBar::new_spinner();
+    spinner.set_style(
+        ProgressStyle::default_spinner()
+            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
+            .template("{spinner:.green} {msg}")
+            .unwrap(),
+    );
+    spinner.set_message("Uploading CAR file...");
+
+    // Start the spinner
+    spinner.enable_steady_tick(Duration::from_millis(100));
 
     let mut child = Command::new("w3")
         .arg("up")
         .arg("--car")
         .arg(file_path.clone())
-        .stdin(Stdio::piped())
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
         .expect("Failed to execute 'w3 up'");
 
     let stdout = BufReader::new(child.stdout.take().expect("Failed to capture stdout"));
-
-    let start = time::Instant::now();
 
     thread::spawn(move || {
         for line in stdout.lines() {
@@ -147,15 +157,18 @@ fn upload_car_file(file_path: String) -> bool {
     });
 
     // Wait for email verification or timeout
-    while start.elapsed().as_secs() < 300 {
+    let start = time::Instant::now();
+    while start.elapsed().as_secs() < 30000 {
         if let Some(status) = child.try_wait().expect("Failed to check process status") {
             if status.success() {
+                spinner.finish_and_clear();
                 println!(
                     "✅ {}",
                     "Successfully uploaded file to Web3.Storage.".green()
                 );
                 return true;
             } else {
+                spinner.finish_and_clear();
                 eprintln!("{}", "upload process failed.".red());
                 return false;
             }
@@ -484,7 +497,7 @@ fn check_and_upload() -> bool {
         .to_str()
         .expect("Failed to convert path to string");
 
-    println!("{} CAR file found: {}", "INFO::".green(), car_file);
+    // println!("{} CAR file found: {}", "INFO::".green(), car_file);
     match upload_car_file(car_file.to_string()) {
         true => return true,
         false => return false,
@@ -493,7 +506,7 @@ fn check_and_upload() -> bool {
 
 /// @notice Entry point function to chain all the different functions required to register a new program
 /// @param email The email of your choice, to be linked if not already to web3 storage
-pub fn register(email: String) {
+pub fn mainnet_register(email: String) {
     match check_if_logged_in(email.clone()) {
         true => {}
         false => {
@@ -518,5 +531,123 @@ pub fn register(email: String) {
         false => {
             return;
         }
+    }
+}
+
+pub fn devnet_register(email: String) {
+    match check_if_logged_in(email.clone()) {
+        true => {}
+        false => {
+            let _is_logged_in = login(email.clone());
+        }
+    };
+    match build_program() {
+        true => match run_carize_container() {
+            true => match check_and_create_space("cartesi-coprocessor-programs".to_string()) {
+                true => match check_and_upload() {
+                    true => match import_machine_for_devnet_operator() {
+                        true => devnet_register_program_with_coprocessor(),
+                        // true => println!("Completed"),
+                        false => return,
+                    },
+                    false => return,
+                },
+                false => return,
+            },
+            false => {
+                return;
+            }
+        },
+        false => {
+            return;
+        }
+    }
+}
+
+/// @notice Function to call the co-processor task manager to register the machine, hash, grogram cid etc.
+fn devnet_register_program_with_coprocessor() {
+    let current_dir = env::current_dir().expect("Failed to get current directory");
+    let output_cid = current_dir.join("output.cid");
+    let output_size = current_dir.join("output.size");
+
+    let cid = read_file(
+        output_cid
+            .to_str()
+            .expect("error converting path to string"),
+        "CID",
+    );
+    let size = read_file(
+        output_size
+            .to_str()
+            .expect("error converting path to string"),
+        "SIZE",
+    );
+    let machine_hash = get_machine_hash();
+
+    let curl_status = Command::new("curl")
+        .arg("-X")
+        .arg("POST")
+        .arg(format!(
+            "http://127.0.0.1:3034/ensure/{}/{}/{}",
+            cid, machine_hash, size
+        ))
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute curl POST command")
+        .wait_with_output()
+        .expect("Failed to wait for curl command to finish");
+
+    if curl_status.status.success() {
+        println!(
+            "✅ {}",
+            "Successfully sent request to co-processor.".green()
+        );
+        let stdout = String::from_utf8_lossy(&curl_status.stdout);
+        println!("✅ {} {}", "RESPONSE::".green(), stdout.green());
+    } else {
+        eprintln!("Failed to send POST request.");
+        let stderr = String::from_utf8_lossy(&curl_status.stderr);
+        eprintln!("Error: {}", stderr);
+    }
+}
+
+fn import_machine_for_devnet_operator() -> bool {
+    let current_dir = env::current_dir().expect("Failed to get current directory");
+    let car_file_path = current_dir.join("output.car");
+    let url = "http://127.0.0.1:5001/api/v0/dag/import";
+
+    let curl_status = Command::new("curl")
+        .arg("-X")
+        .arg("POST")
+        .arg("-F")
+        .arg(format!(
+            "file=@{}",
+            car_file_path
+                .to_str()
+                .expect("error converting path to string")
+        ))
+        .arg(url)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to import machine for local operator")
+        .wait_with_output()
+        .expect("Failed to wait for import machine command to finish");
+
+    if curl_status.status.success() {
+        println!(
+            "{} {}",
+            "CARTESI::SUCCESS::".green(),
+            String::from_utf8_lossy(&curl_status.stdout).green()
+        );
+        return true;
+    } else {
+        eprintln!(
+            "{} {}",
+            "CARTESI::ERROR::".red(),
+            String::from_utf8_lossy(&curl_status.stderr).red()
+        );
+        return false;
     }
 }

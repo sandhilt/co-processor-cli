@@ -180,6 +180,6 @@ pub fn get_machine_hash() -> String {
         .collect::<Vec<_>>()
         .concat();
 
-    println!("MACHINE HASH::{}", output.trim().to_string());
+    // println!("MACHINE HASH::{}", output.trim().to_string());
     return output.trim().to_string();
 }
