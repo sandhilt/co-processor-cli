@@ -183,3 +183,29 @@ pub fn get_machine_hash() -> String {
     // println!("MACHINE HASH::{}", output.trim().to_string());
     return output.trim().to_string();
 }
+
+/// @notice Function to check that we have valid arguents for deployment
+pub fn check_deploymet_args(
+    network: &String,
+    private_key: Option<String>,
+    rpc: Option<String>,
+) -> bool {
+    let mut reject: bool = false;
+    if private_key.is_none() {
+        println!(
+            "{} {}",
+            "Please provide a private key for deploying to".red(),
+            network.to_lowercase().red()
+        );
+        reject = true;
+    }
+    if rpc.is_none() {
+        println!(
+            "{} {}",
+            "Please provide a RPC endpoint for deploying to".red(),
+            network.to_lowercase().red()
+        );
+        reject = true;
+    }
+    return reject;
+}

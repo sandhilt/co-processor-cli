@@ -4,7 +4,7 @@ use crate::helpers::helpers::{
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::env;
-use std::io::{BufRead, BufReader, Stderr};
+use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 use std::{thread, time, time::Duration};
 
