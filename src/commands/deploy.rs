@@ -1,59 +1,8 @@
+use crate::helpers::helpers::read_file;
 use colored::Colorize;
 use regex::Regex;
 use serde_json::Value;
-use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
-use std::{thread, time, time::Duration};
-
-use crate::helpers::helpers::read_file;
-
-// /// @notice Function to call the co-processor task manager to register the machine, hash, grogram cid etc.
-// fn devnet_register_program_with_coprocessor() {
-//     let current_dir = env::current_dir().expect("Failed to get current directory");
-//     let output_cid = current_dir.join("output.cid");
-//     let output_size = current_dir.join("output.size");
-
-//     let cid = read_file(
-//         output_cid
-//             .to_str()
-//             .expect("error converting path to string"),
-//         "CID",
-//     );
-//     let size = read_file(
-//         output_size
-//             .to_str()
-//             .expect("error converting path to string"),
-//         "SIZE",
-//     );
-//     let machine_hash = get_machine_hash();
-
-//     let curl_status = Command::new("curl")
-//         .arg("-X")
-//         .arg("POST")
-//         .arg(format!(
-//             "http://127.0.0.1:3034/ensure/{}/{}/{}",
-//             cid, machine_hash, size
-//         ))
-//         .stdout(Stdio::piped())
-//         .stderr(Stdio::piped())
-//         .spawn()
-//         .expect("Failed to execute curl POST command")
-//         .wait_with_output()
-//         .expect("Failed to wait for curl command to finish");
-
-//     if curl_status.status.success() {
-//         println!(
-//             "✅ {}",
-//             "Successfully sent request to co-processor.".green()
-//         );
-//         let stdout = String::from_utf8_lossy(&curl_status.stdout);
-//         println!("✅ {} {}", "RESPONSE::".green(), stdout.green());
-//     } else {
-//         eprintln!("Failed to send POST request.");
-//         let stderr = String::from_utf8_lossy(&curl_status.stderr);
-//         eprintln!("Error: {}", stderr);
-//     }
-// }
 
 pub fn deploy_contract(private_key: String, rpc: String) {
     let forge_status = Command::new("forge")

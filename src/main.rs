@@ -20,16 +20,13 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Build and run all necessary steps to register your program with co-processor
     #[command(
         about = "Build and run all necessary steps to register your program with co-processor"
     )]
     Register {
-        /// Email address for logging in
         #[arg(short, long, help = "Your email address registered with Web3.Storage")]
         email: String,
 
-        /// Network your program will be deplyed to
         #[arg(
             short,
             long,
@@ -37,28 +34,23 @@ enum Commands {
         )]
         network: String,
     },
-    /// Bootstrap a new directiry for your coprocessor program
     #[command(
         about = "Bootstrap a new directiry for your program",
         long_about = "Bootstrap a new directiry for your coprocessor program, this would contain both the cartesi template and also the solidity template"
     )]
     Create {
-        /// Name of your program
         #[arg(short, long, help = "Name of your program")]
         dapp_name: String,
 
-        /// Language you intend to build with
         #[arg(short, long, help = "Language you intend to build with")]
         template: String,
     },
 
-    /// Deploy the solidity code for your coprocessor program to any network of choice.
     #[command(
         about = "Deploy the solidity code for your coprocessor program to any network of choice.",
         long_about = "Deploy the solidity code for your coprocessor program to any network of choice, by running the default deploy script (Deploy.s.sol)"
     )]
     Deploy {
-        /// Network your program will be deplyed to
         #[arg(
             short,
             long,
@@ -66,11 +58,9 @@ enum Commands {
         )]
         network: String,
 
-        /// Private key for deploying to selected network
         #[arg(short, long, help = "Private key for deploying to selected network")]
         private_key: Option<String>,
 
-        /// RPC for deploying to network of choice
         #[arg(short, long, help = "RPC for deploying to network of choice")]
         rpc: Option<String>,
     },
@@ -99,7 +89,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         false => Ok(()),
         true => match cli.command {
             Commands::Register { email, network } => {
-                println!("Registering progam with co-processor...");
                 check_registration_environment(network, email);
                 Ok(())
             }
@@ -127,11 +116,6 @@ fn check_registration_environment(network: String, email: String) {
 
     for option in all::<DeploymentOptions>().collect::<Vec<_>>() {
         if network.to_lowercase() == option.to_string().to_lowercase() {
-            println!(
-                "Deployment environment {} is available",
-                option.to_string().to_lowercase()
-            );
-
             environment = Some(option);
         }
     }

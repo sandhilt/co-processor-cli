@@ -188,63 +188,42 @@ fn upload_car_file(file_path: String) -> bool {
 /// @notice Function to build a Cartesi project before the registration process
 /// @returns a boolean value indicating whether or not the execution was successful
 fn build_program() -> bool {
-    println!("{}", "Building Cartesi Program...".yellow());
-    let mut child = Command::new("cartesi")
+    // Create a spinner and set the message
+    let spinner = ProgressBar::new_spinner();
+    spinner.set_style(
+        ProgressStyle::default_spinner()
+            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
+            .template("{spinner:.yellow} {msg}")
+            .unwrap(),
+    );
+    spinner.set_message("Building Cartesi Program...");
+
+    // Start the spinner
+    spinner.enable_steady_tick(Duration::from_millis(100));
+
+    let child = Command::new("cartesi")
         .arg("build")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .expect("Failed to execute 'cartesi build' command");
+        .expect("Failed to execute 'cartesi build' command")
+        .wait_with_output()
+        .expect("Failed to wait for forge command to finish");
 
-    let stdout = BufReader::new(child.stdout.take().expect("Failed to capture stdout"));
-    let stderr = BufReader::new(child.stderr.take().expect("Failed to capture stderr"));
-
-    let start = time::Instant::now();
-
-    thread::spawn(move || {
-        for line in stdout.lines() {
-            match line {
-                Ok(output) => {
-                    println!("{} {}", "CARTESI::".green(), output.green());
-                }
-                Err(e) => eprintln!("Error reading stdout: {}", e),
-            }
-        }
-    });
-
-    thread::spawn(move || {
-        for line in stderr.lines() {
-            match line {
-                Ok(output) => {
-                    println!("{} {}", "CARTESI::".green(), output.red());
-                }
-                Err(e) => eprintln!("Error reading stdout: {}", e),
-            }
-        }
-    });
-
-    // Wait for email verification or timeout
-    while start.elapsed().as_secs() < 300 {
-        if let Some(status) = child.try_wait().expect("Failed to check process status") {
-            if status.success() {
-                println!("✅ {}", "Cartesi Program built successfully.".green());
-                return true;
-            } else {
-                eprintln!("{}", "build process failed.".red());
-                return false;
-            }
-        }
-
-        // Poll every 5 seconds
-        thread::sleep(time::Duration::from_secs(5));
+    if child.status.success() {
+        spinner.finish_and_clear();
+        let stdout = String::from_utf8_lossy(&child.stdout);
+        println!("{} {}", "CARTESI::".green(), stdout.green());
+        println!("✅ {}", "Cartesi Program built successfully.".green());
+        return true;
+    } else {
+        spinner.finish_and_clear();
+        let stderr = String::from_utf8_lossy(&child.stderr);
+        println!("{} {}", "CARTESI::".red(), stderr.red());
+        eprintln!("{}", "build process failed.".red());
+        return false;
     }
-
-    // If timeout occurs
-    child
-        .kill()
-        .expect("Failed to terminate the build process.");
-    return false;
 }
 
 /// @notice Function to run the Carize command to generate car files
@@ -638,14 +617,14 @@ fn import_machine_for_devnet_operator() -> bool {
     if curl_status.status.success() {
         println!(
             "{} {}",
-            "CARTESI::SUCCESS::".green(),
+            "RESPONSE::".green(),
             String::from_utf8_lossy(&curl_status.stdout).green()
         );
         return true;
     } else {
         eprintln!(
             "{} {}",
-            "CARTESI::ERROR::".red(),
+            "RESPONSE".red(),
             String::from_utf8_lossy(&curl_status.stderr).red()
         );
         return false;
