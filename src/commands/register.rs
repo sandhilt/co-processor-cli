@@ -1,12 +1,11 @@
 use crate::helpers::helpers::{
-    check_available_space, check_if_logged_in, get_machine_hash, read_file,
+    check_available_space, check_if_logged_in, get_machine_hash, get_spinner, read_file,
 };
 use colored::Colorize;
-use indicatif::{ProgressBar, ProgressStyle};
 use std::env;
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
-use std::{thread, time, time::Duration};
+use std::{thread, time};
 
 /// @notice Function to set the space where uploaded car files will be saved to
 /// @param space_name The name of the space of choice
@@ -121,17 +120,8 @@ fn create_space(space: String) {
 /// @returns a boolean value indicating whether or not the execution was successful
 fn upload_car_file(file_path: String) -> bool {
     // Create a spinner and set the message
-    let spinner = ProgressBar::new_spinner();
-    spinner.set_style(
-        ProgressStyle::default_spinner()
-            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
-            .template("{spinner:.green} {msg}")
-            .unwrap(),
-    );
+    let spinner = get_spinner();
     spinner.set_message("Uploading CAR file...");
-
-    // Start the spinner
-    spinner.enable_steady_tick(Duration::from_millis(100));
 
     let mut child = Command::new("w3")
         .arg("up")
@@ -189,17 +179,8 @@ fn upload_car_file(file_path: String) -> bool {
 /// @returns a boolean value indicating whether or not the execution was successful
 fn build_program() -> bool {
     // Create a spinner and set the message
-    let spinner = ProgressBar::new_spinner();
-    spinner.set_style(
-        ProgressStyle::default_spinner()
-            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
-            .template("{spinner:.yellow} {msg}")
-            .unwrap(),
-    );
+    let spinner = get_spinner();
     spinner.set_message("Building Cartesi Program...");
-
-    // Start the spinner
-    spinner.enable_steady_tick(Duration::from_millis(100));
 
     let child = Command::new("cartesi")
         .arg("build")
@@ -309,7 +290,7 @@ fn run_carize_container() -> bool {
 }
 
 /// @notice Function to call the co-processor task manager to register the machine, hash, grogram cid etc.
-fn register_program_with_coprocessor() {
+pub fn register_program_with_coprocessor() {
     let current_dir = env::current_dir().expect("Failed to get current directory");
     let output_cid = current_dir.join("output.cid");
     let output_size = current_dir.join("output.size");

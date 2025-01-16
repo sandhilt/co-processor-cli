@@ -1,26 +1,18 @@
+use crate::helpers::helpers::get_spinner;
 use colored::Colorize;
-use indicatif::{ProgressBar, ProgressStyle};
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
-use std::{thread, time, time::Duration};
+use std::{thread, time};
 
 pub fn start_devnet() {
     let coprocessor_path = clone_coprocessor_repo();
-
     match coprocessor_path {
         Some(path) => {
-            let spinner = ProgressBar::new_spinner();
-            spinner.set_style(
-                ProgressStyle::default_spinner()
-                    .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
-                    .template("{spinner:.green} {msg}")
-                    .unwrap(),
-            );
+            build_container(path.clone());
+            pull_container(path.clone());
+            let spinner = get_spinner();
             spinner.set_message("Starting devnet containers...");
-
-            // Start the spinner
-            spinner.enable_steady_tick(Duration::from_millis(100));
 
             // Run Cartesi-Coprocessor in the background
             let docker_status = Command::new("docker")
@@ -246,17 +238,8 @@ pub fn stop_devnet() {
 
     match coprocessor_path {
         Some(path) => {
-            let spinner = ProgressBar::new_spinner();
-            spinner.set_style(
-                ProgressStyle::default_spinner()
-                    .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
-                    .template("{spinner:.green} {msg}")
-                    .unwrap(),
-            );
+            let spinner = get_spinner();
             spinner.set_message("Stoping devnet containers...");
-
-            // Start the spinner
-            spinner.enable_steady_tick(Duration::from_millis(100));
 
             // Run Cartesi-Coprocessor in the background
             let docker_status = Command::new("docker")
@@ -293,5 +276,64 @@ pub fn stop_devnet() {
             eprintln!("❌ Failed to clone Cartesi-Coprocessor repository.");
             return;
         }
+    }
+}
+
+fn build_container(path: String) {
+    let spinner = get_spinner();
+    spinner.set_message("Building devnet containers...");
+
+    let pull_status = Command::new("docker")
+        .arg("compose")
+        .arg("-f")
+        .arg("docker-compose-devnet.yaml")
+        .arg("build")
+        .current_dir(path)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute build container command")
+        .wait_with_output()
+        .expect("Failed to complete build container command");
+
+    if pull_status.status.success() {
+        spinner.finish_and_clear();
+        println!("✅ {}", "Successfully built Devnet containers.".green());
+    } else {
+        spinner.finish_and_clear();
+        eprintln!("❌ Failed to build containers.");
+        let stderr = String::from_utf8_lossy(&pull_status.stderr);
+        println!("{} {}", "DOCKER::RESPONSE::".red(), stderr.red());
+    }
+}
+
+fn pull_container(path: String) {
+    let spinner = get_spinner();
+    spinner.set_message("Pulling changes to devnet containers...");
+
+    let pull_status = Command::new("docker")
+        .arg("compose")
+        .arg("-f")
+        .arg("docker-compose-devnet.yaml")
+        .arg("pull")
+        .current_dir(path)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to pull changes to dev container")
+        .wait_with_output()
+        .expect("Failed to complete pull changes command");
+
+    if pull_status.status.success() {
+        spinner.finish_and_clear();
+        println!(
+            "✅ {}",
+            "Successfully pulled changes to Devnet containers.".green()
+        );
+    } else {
+        spinner.finish_and_clear();
+        eprintln!("❌ Failed to pull changes to containers.");
+        let stderr = String::from_utf8_lossy(&pull_status.stderr);
+        println!("{} {}", "DOCKER::RESPONSE::".red(), stderr.red());
     }
 }

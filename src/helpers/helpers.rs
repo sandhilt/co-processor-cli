@@ -2,11 +2,13 @@ use crate::commands::deploy::deploy_contract;
 use crate::commands::register::{devnet_register, mainnet_register};
 use colored::Colorize;
 use enum_iterator::{all, Sequence};
+use indicatif::{ProgressBar, ProgressStyle};
 use std::env;
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::time::Duration;
 use std::{thread, time};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Sequence)]
@@ -311,4 +313,19 @@ pub fn check_deployment_environment(
             return;
         }
     }
+}
+
+pub fn get_spinner() -> ProgressBar {
+    let spinner = ProgressBar::new_spinner();
+
+    spinner.set_style(
+        ProgressStyle::default_spinner()
+            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
+            .template("{spinner:.green} {msg}")
+            .unwrap(),
+    );
+
+    // Start the spinner
+    spinner.enable_steady_tick(Duration::from_millis(100));
+    return spinner;
 }
