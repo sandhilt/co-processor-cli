@@ -5,7 +5,9 @@ use crate::commands::devnet::{start_devnet, stop_devnet};
 use crate::commands::register::register_program_with_coprocessor;
 use crate::helpers::helpers::check_dependencies_installed;
 use clap::{Parser, Subcommand};
-use helpers::helpers::{check_deployment_environment, check_registration_environment};
+use helpers::helpers::{
+    address_book, check_deployment_environment, check_registration_environment,
+};
 use std::error::Error;
 
 /// A CLI tool to interact with Web3.Storage
@@ -92,6 +94,12 @@ enum Commands {
         )]
         constructor_args: Option<Vec<String>>,
     },
+
+    #[command(
+        about = "Displays the machine Hash and also co-processor address on different networks",
+        long_about = "Displays the machine Hash and also co-processor address on different networks"
+    )]
+    AddressBook,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -139,6 +147,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                     constructor_args,
                     contract_name,
                 );
+                Ok(())
+            }
+            Commands::AddressBook => {
+                address_book();
                 Ok(())
             }
         },

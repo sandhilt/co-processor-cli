@@ -329,3 +329,61 @@ pub fn get_spinner() -> ProgressBar {
     spinner.enable_steady_tick(Duration::from_millis(100));
     return spinner;
 }
+
+pub fn display_machine_hash() -> Option<String> {
+    let current_dir = env::current_dir().expect("Failed to get current directory");
+    let image_hash = current_dir.join(".cartesi/image/hash");
+    if !image_hash.exists() {
+        return None;
+    } else {
+        let hash = get_machine_hash();
+        return Some(hash);
+    }
+}
+
+pub fn address_book() {
+    let possible_machine_hash = display_machine_hash();
+    let mut _machine_hash = String::new();
+
+    match possible_machine_hash {
+        Some(hash) => {
+            _machine_hash = format!("0x{}", hash);
+        }
+        None => _machine_hash = String::from(" "),
+    }
+
+    let data = vec![
+        ("Machine Hash", _machine_hash),
+        (
+            "task_issuer",
+            String::from("0x95401dc811bb5740090279Ba06cfA8fcF6113778"),
+        ),
+        (
+            "callback_address",
+            String::from("0x95401dc811bb5740090279Ba06cfA8fcF6113778"),
+        ),
+        (
+            "payment_token",
+            String::from("0xc5a5C42992dECbae36851359345FE25997F5C42d"),
+        ),
+        (
+            "l2Sender",
+            String::from("0x82e01223d51Eb87e16A03E24687EDF0F294da6f1"),
+        ),
+        (
+            "l2_coprocessor_address",
+            String::from("0xCD8a1C3ba11CF5ECfa6267617243239504a98d90"),
+        ),
+        (
+            "l1_coprocessor_address",
+            String::from("0x7969c5eD335650692Bc04293B07F5BF2e7A673C0"),
+        ),
+    ];
+
+    // Calculate the width of the first column
+    let max_width = data.iter().map(|(name, _)| name.len()).max().unwrap_or(0);
+
+    for (name, value) in data {
+        println!("{:<width$}  {}", name, value, width = max_width);
+    }
+}
