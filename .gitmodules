@@ -6,6 +6,3 @@
 [submodule "contract-template/lib/coprocessor-base-contract"]
 	path = contract-template/lib/coprocessor-base-contract
 	url = https://github.com/Mugen-Builders/coprocessor-base-contract
-[submodule "cartesi-coprocessor"]
-	path = cartesi-coprocessor
-	url = https://github.com/zippiehq/cartesi-coprocessor
