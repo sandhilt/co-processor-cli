@@ -1,6 +1,7 @@
 mod commands;
 mod helpers;
 use crate::commands::create::create;
+use crate::commands::devnet::{start_devnet, stop_devnet};
 use crate::helpers::helpers::check_dependencies_installed;
 use clap::{Parser, Subcommand};
 use helpers::helpers::{check_deployment_environment, check_registration_environment};
@@ -43,6 +44,18 @@ enum Commands {
     },
 
     #[command(
+        about = "Start the devnet environment in detach mode",
+        long_about = "Start the devnet environment in detach mode"
+    )]
+    StartDevnet,
+
+    #[command(
+        about = "Stop the devnet environment",
+        long_about = "Stop the devnet environment"
+    )]
+    StopDevnet,
+
+    #[command(
         about = "Deploy the solidity code for your coprocessor program to any network of choice.",
         long_about = "Deploy the solidity code for your coprocessor program to any network of choice, by running the default deploy script (Deploy.s.sol)"
     )]
@@ -79,10 +92,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     match check_dependencies_installed() {
         false => Ok(()),
         true => match cli.command {
-            Commands::Register { email, network } => {
-                check_registration_environment(network, email);
-                Ok(())
-            }
             Commands::Create {
                 template,
                 dapp_name,
@@ -90,6 +99,20 @@ fn main() -> Result<(), Box<dyn Error>> {
                 create(dapp_name, template);
                 Ok(())
             }
+            Commands::StartDevnet => {
+                start_devnet();
+                Ok(())
+            }
+            Commands::StopDevnet => {
+                stop_devnet();
+                Ok(())
+            }
+
+            Commands::Register { email, network } => {
+                check_registration_environment(network, email);
+                Ok(())
+            }
+
             Commands::Deploy {
                 contract_name,
                 network,
