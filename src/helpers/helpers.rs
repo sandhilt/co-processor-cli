@@ -1,5 +1,8 @@
 use crate::commands::deploy::deploy_contract;
-use crate::commands::register::{devnet_register, mainnet_register};
+use crate::commands::register::{
+    devnet_register, devnet_register_program_with_coprocessor, mainnet_register,
+    register_program_with_coprocessor,
+};
 use colored::Colorize;
 use enum_iterator::{all, Sequence};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -402,5 +405,39 @@ pub fn address_book() {
 
     for (name, value) in data {
         println!("{:<width$}  {}", name, value, width = max_width);
+    }
+}
+
+/// @notice This function check the network passed then calls the appropriate function to check the status of a the registration process.
+/// @param network The network where the registration process is happening.
+pub fn check_network_and_confirm_status(network: String) {
+    let mut environment: Option<DeploymentOptions> = None;
+
+    for option in all::<DeploymentOptions>().collect::<Vec<_>>() {
+        if network.to_lowercase() == option.to_string().to_lowercase() {
+            environment = Some(option);
+        }
+    }
+
+    if environment.is_none() {
+        println!(
+            "{}",
+            "Invalid network environment, please select either, devnet, mainnet, or testnet".red()
+        );
+        return;
+    }
+
+    if let Some(deployment_env) = environment {
+        match deployment_env {
+            DeploymentOptions::Devnet => {
+                devnet_register_program_with_coprocessor();
+            }
+            DeploymentOptions::Testnet => {
+                println!("Sorry Testnet integration is not available at the moment!!",);
+            }
+            DeploymentOptions::Mainnet => {
+                register_program_with_coprocessor();
+            }
+        }
     }
 }

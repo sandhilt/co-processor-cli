@@ -2,8 +2,7 @@ mod commands;
 mod helpers;
 use crate::commands::create::create;
 use crate::commands::devnet::{start_devnet, stop_devnet};
-use crate::commands::register::register_program_with_coprocessor;
-use crate::helpers::helpers::check_dependencies_installed;
+use crate::helpers::helpers::{check_dependencies_installed, check_network_and_confirm_status};
 use clap::{Parser, Subcommand};
 use helpers::helpers::{
     address_book, check_deployment_environment, check_registration_environment,
@@ -62,7 +61,14 @@ enum Commands {
         about = "Check the coprocessor solver for status of the program download process",
         long_about = "Check the coprocessor solver for status of the program download process"
     )]
-    CheckStatus,
+    CheckStatus {
+        #[arg(
+            short,
+            long,
+            help = "Environment where your program is registered to, e.g. Devnet, Mainnet or Testnet"
+        )]
+        network: String,
+    },
 
     #[command(
         about = "Deploy the solidity code for your coprocessor program to any network of choice.",
@@ -127,8 +133,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                 check_registration_environment(network, email);
                 Ok(())
             }
-            Commands::CheckStatus => {
-                register_program_with_coprocessor();
+            Commands::CheckStatus { network } => {
+                check_network_and_confirm_status(network);
                 Ok(())
             }
 

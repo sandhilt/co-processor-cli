@@ -64,7 +64,23 @@ cartesi-coprocessor create --dapp-name <project_name> --template <language templ
 Register your Cartesi co-processor program:
 
 ```bash
-cartesi-coprocessor register --email <w3 storage account email>
+cartesi-coprocessor register --email <w3 storage account email> --network <devnet, mainnet or testnet>
+```
+
+### Start devnet environment
+
+Start docker containers for coprocessor task manager and solver for devnet
+
+```bash
+cartesi-coprocessor start-devnet
+```
+
+### Stop devnet environment
+
+Stop docker containers for coprocessor task manager and solver for devnet
+
+```bash
+cartesi-coprocessor stop-devnet
 ```
 
 ## Example Workflow
@@ -82,7 +98,7 @@ cd my-cartesi-project
 3. **Register the Program**
 
 ```bash
-cartesi-coprocessor register --email test@gmail.com
+cartesi-coprocessor register --email test@gmail.com --network devnet
 ```
 
 ## Contributing

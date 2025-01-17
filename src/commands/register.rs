@@ -527,7 +527,7 @@ pub fn devnet_register(email: String) {
 }
 
 /// @notice Function to call the co-processor task manager to register the machine, hash, grogram cid etc on Devnet.
-fn devnet_register_program_with_coprocessor() {
+pub fn devnet_register_program_with_coprocessor() {
     let current_dir = env::current_dir().expect("Failed to get current directory");
     let output_cid = current_dir.join("output.cid");
     let output_size = current_dir.join("output.size");
@@ -570,7 +570,15 @@ fn devnet_register_program_with_coprocessor() {
     } else {
         eprintln!("Failed to send POST request.");
         let stderr = String::from_utf8_lossy(&curl_status.stderr);
-        eprintln!("Error: {}", stderr);
+        if stderr.contains("Failed to connect to") || stderr.contains("Couldn't connect to server")
+        {
+            println!(
+                "{}",
+                "Devnet container not running, run the stop and start devnet command!!".red()
+            )
+        } else {
+            eprintln!("Error: {}", stderr);
+        }
     }
 }
 
