@@ -202,7 +202,6 @@ pub fn get_machine_hash() -> String {
         .collect::<Vec<_>>()
         .concat();
 
-    // println!("MACHINE HASH::{}", output.trim().to_string());
     return output.trim().to_string();
 }
 
@@ -232,6 +231,12 @@ pub fn check_deploymet_args(
     return reject;
 }
 
+/// @notice This function determines the deployment environment (Devnet, Testnet, or Mainnet)
+/// @notice based on the given network string. It then performs the appropriate registration
+/// @notice action for the specified environment using the provided email.
+///
+/// @param `network` A `String` representing the network environment to check. It should be one of "devnet", "testnet", or "mainnet".
+/// @param `email` A `String` containing the email address to be used for registration.
 pub fn check_registration_environment(network: String, email: String) {
     let mut environment: Option<DeploymentOptions> = None;
 
@@ -263,6 +268,13 @@ pub fn check_registration_environment(network: String, email: String) {
         }
     }
 }
+
+/// @notice This Function determines the deployment environment (Devnet, Testnet, or Mainnet) based on the given network string and deploys the contract using the provided parameters.
+/// @param `network` A `String` representing the network environment to deploy to. It should be one of "devnet", "testnet", or "mainnet".
+/// @param `private_key` An `Option<String>` containing the private key for deployment. Required for "mainnet" and "testnet".
+/// @param `rpc` An `Option<String>` containing the RPC endpoint for deployment. Required for "mainnet" and "testnet".
+/// @param `constructor_args` An `Option<Vec<String>>` containing the constructor arguments for the contract, if any.
+/// @param `contract_name` A `String` representing the name of the contract to be deployed.
 
 pub fn check_deployment_environment(
     network: String,
@@ -315,6 +327,8 @@ pub fn check_deployment_environment(
     }
 }
 
+/// @notice This function Creates and returns a new spinner progress bar with a custom style.
+/// @returns A `ProgressBar` instance configured as a spinner with the specified style and update interval.
 pub fn get_spinner() -> ProgressBar {
     let spinner = ProgressBar::new_spinner();
 
@@ -330,6 +344,8 @@ pub fn get_spinner() -> ProgressBar {
     return spinner;
 }
 
+/// @notice This function checks for the existence of a machine hash file in the current directory and returns its content if available.
+/// @returns `Option<String>` - Returns `Some(String)` containing the machine hash if the file exists,  otherwise returns `None`.
 pub fn display_machine_hash() -> Option<String> {
     let current_dir = env::current_dir().expect("Failed to get current directory");
     let image_hash = current_dir.join(".cartesi/image/hash");
@@ -341,6 +357,7 @@ pub fn display_machine_hash() -> Option<String> {
     }
 }
 
+/// @notice This function displays the address book for the current machine.
 pub fn address_book() {
     let possible_machine_hash = display_machine_hash();
     let mut _machine_hash = String::new();
@@ -349,7 +366,7 @@ pub fn address_book() {
         Some(hash) => {
             _machine_hash = format!("0x{}", hash);
         }
-        None => _machine_hash = String::from(" "),
+        None => _machine_hash = String::from("--"),
     }
 
     let data = vec![

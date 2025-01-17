@@ -1,6 +1,11 @@
 use colored::Colorize;
 use std::process::{Command, Stdio};
 
+/// @notice Function to deploy a smart contract with constructor arguments using Forge
+/// @param private_key The private of thye account to deploy with
+/// @param rpc The rpc of the chain to deploy to
+/// @param constructor_args Constructor arguments for the smart contract
+/// @param contract_name The name of the smart contract
 pub fn deploy_contract(
     private_key: String,
     rpc: String,
@@ -47,6 +52,10 @@ pub fn deploy_contract(
     }
 }
 
+// Function to deploy a smart contract without constructor arguments using Forge
+/// @param private_key The private of thye account to deploy with
+/// @param rpc The rpc of the chain to deploy to
+/// @param contract_name The name of the smart contract
 fn deploy_without_args(private_key: String, rpc: String, contract_name: String) {
     let forge_status = Command::new("forge")
         .arg("create")

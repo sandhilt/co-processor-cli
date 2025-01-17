@@ -5,6 +5,7 @@ use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 use std::{thread, time};
 
+/// @notice Function to start a local development network set of docker containers for Cartesi-Coprocessor
 pub fn start_devnet() {
     let coprocessor_path = clone_coprocessor_repo();
     match coprocessor_path {
@@ -53,6 +54,7 @@ pub fn start_devnet() {
     }
 }
 
+/// @notice Function to clone the cartesi-coprocessor repository into a specified repo on host machine
 fn clone_coprocessor_repo() -> Option<String> {
     // Get the directory where the CLI executable resides
     let exe_dir = std::env::current_exe()
@@ -118,6 +120,8 @@ fn clone_coprocessor_repo() -> Option<String> {
     }
 }
 
+/// @notice Function to check the git status of the coprocessor repo for cases where the local version is behind the remote branch
+/// @param path The path to the local coprocessor repository
 fn check_git_status(path: String) {
     let status_output = Command::new("git")
         .arg("status")
@@ -146,6 +150,8 @@ fn check_git_status(path: String) {
     }
 }
 
+/// @notice Function to pull latest changes from the remote repository for the coprocessor
+/// /// @param path The path to the local coprocessor repository
 fn pull_latest_changes(path: String) {
     let pull_status = Command::new("git")
         .arg("pull")
@@ -170,7 +176,8 @@ fn pull_latest_changes(path: String) {
         println!("{} {}", "GIT::RESPONSE::".red(), stderr.red());
     }
 }
-
+/// @notice Function to update submodules contained in the coprocessor repository
+/// @param path The path to the local coprocessor repository
 fn update_submodules(path: String) {
     let mut update_status = Command::new("git")
         .arg("submodule")
@@ -233,6 +240,7 @@ fn update_submodules(path: String) {
     }
 }
 
+/// @notice Function to Stop a currently running local dev network containers for the coprocessor
 pub fn stop_devnet() {
     let coprocessor_path = clone_coprocessor_repo();
 
@@ -279,6 +287,8 @@ pub fn stop_devnet() {
     }
 }
 
+/// @notice Function to build containers for the coprocessor
+/// @param path The path to the local coprocessor repository
 fn build_container(path: String) {
     let spinner = get_spinner();
     spinner.set_message("Building devnet containers...");
@@ -307,6 +317,8 @@ fn build_container(path: String) {
     }
 }
 
+/// @notice Function to pull updates to the coprocessor containers
+/// @param path The path to the local coprocessor repository
 fn pull_container(path: String) {
     let spinner = get_spinner();
     spinner.set_message("Pulling changes to devnet containers...");

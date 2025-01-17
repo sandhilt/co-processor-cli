@@ -464,7 +464,7 @@ fn check_and_upload() -> bool {
     };
 }
 
-/// @notice Entry point function to chain all the different functions required to register a new program
+/// @notice Entry point function to chain all the different functions required to register a new program on mainnet
 /// @param email The email of your choice, to be linked if not already to web3 storage
 pub fn mainnet_register(email: String) {
     match check_if_logged_in(email.clone()) {
@@ -494,6 +494,8 @@ pub fn mainnet_register(email: String) {
     }
 }
 
+/// @notice Entry point function to chain all the different functions required to register a new program in devnet mode.
+/// @param email The email of your choice, to be linked if not already to web3 storage
 pub fn devnet_register(email: String) {
     match check_if_logged_in(email.clone()) {
         true => {}
@@ -524,7 +526,7 @@ pub fn devnet_register(email: String) {
     }
 }
 
-/// @notice Function to call the co-processor task manager to register the machine, hash, grogram cid etc.
+/// @notice Function to call the co-processor task manager to register the machine, hash, grogram cid etc on Devnet.
 fn devnet_register_program_with_coprocessor() {
     let current_dir = env::current_dir().expect("Failed to get current directory");
     let output_cid = current_dir.join("output.cid");
@@ -572,6 +574,8 @@ fn devnet_register_program_with_coprocessor() {
     }
 }
 
+/// @notice Function to call the import endpoint of the co-processor in devnet mode.
+/// @return boolean to symbolise the status of the process.
 fn import_machine_for_devnet_operator() -> bool {
     let current_dir = env::current_dir().expect("Failed to get current directory");
     let car_file_path = current_dir.join("output.car");
