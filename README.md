@@ -80,7 +80,8 @@ cartesi-coprocessor check-status --network <devnet, mainnet or testnet>
 ### Deploy
 
 Deploys the solidity contract of your project to any specified network of your choice:
-Note: this should be run in the directory for your solidity contract not the base directory
+Note: this should be run in the directory for your solidity contract not the base directory.
+Note; Each successful deployment is logged and stored in a separate directory called deployment_history.
 
 ```bash
 cartesi-coprocessor deploy --contract-name <contract name> --network <devnet, mainnet or testnet> --constructor-args <Add as musch argument as needed seperated by single space>
