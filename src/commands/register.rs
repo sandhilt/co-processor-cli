@@ -290,7 +290,7 @@ fn run_carize_container() -> bool {
 }
 
 /// @notice Function to call the co-processor task manager to register the machine, hash, grogram cid etc.
-pub fn register_program_with_coprocessor() {
+pub fn register_program_with_coprocessor(base_url: String) {
     let current_dir = env::current_dir().expect("Failed to get current directory");
     let output_cid = current_dir.join("output.cid");
     let output_size = current_dir.join("output.size");
@@ -313,8 +313,8 @@ pub fn register_program_with_coprocessor() {
         .arg("-X")
         .arg("POST")
         .arg(format!(
-            "https://cartesi-coprocessor-solver.fly.dev/ensure/{}/{}/{}",
-            cid, machine_hash, size
+            "{}/ensure/{}/{}/{}",
+            base_url, cid, machine_hash, size
         ))
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -478,7 +478,41 @@ pub fn mainnet_register(email: String) {
             true => match check_and_create_space("cartesi-coprocessor-programs".to_string()) {
                 true => match check_and_upload() {
                     true => {
-                        register_program_with_coprocessor();
+                        register_program_with_coprocessor(String::from(
+                            "https://cartesi-coprocessor-solver.fly.dev",
+                        ));
+                    }
+                    false => return,
+                },
+                false => return,
+            },
+            false => {
+                return;
+            }
+        },
+        false => {
+            return;
+        }
+    }
+}
+
+/// @notice Entry point function to chain all the different functions required to register a new program on mainnet
+/// @param email The email of your choice, to be linked if not already to web3 storage
+pub fn testnet_register(email: String) {
+    match check_if_logged_in(email.clone()) {
+        true => {}
+        false => {
+            let _is_logged_in = login(email.clone());
+        }
+    };
+    match build_program() {
+        true => match run_carize_container() {
+            true => match check_and_create_space("cartesi-coprocessor-programs".to_string()) {
+                true => match check_and_upload() {
+                    true => {
+                        register_program_with_coprocessor(String::from(
+                            "https://cartesi-coprocessor-solver-dev.fly.dev",
+                        ));
                     }
                     false => return,
                 },

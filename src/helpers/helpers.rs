@@ -1,7 +1,7 @@
 use crate::commands::deploy::deploy_contract;
 use crate::commands::register::{
     devnet_register, devnet_register_program_with_coprocessor, mainnet_register,
-    register_program_with_coprocessor,
+    register_program_with_coprocessor, testnet_register,
 };
 use colored::Colorize;
 use enum_iterator::{all, Sequence};
@@ -263,7 +263,7 @@ pub fn check_registration_environment(network: String, email: String) {
                 devnet_register(email);
             }
             DeploymentOptions::Testnet => {
-                println!("Sorry Testnet integration is not available at the moment!!",);
+                testnet_register(email);
             }
             DeploymentOptions::Mainnet => {
                 mainnet_register(email);
@@ -375,8 +375,12 @@ pub fn address_book() {
     let data = vec![
         ("Machine Hash", _machine_hash),
         (
-            "task_issuer",
+            "Devnet_task_issuer",
             String::from("0x95401dc811bb5740090279Ba06cfA8fcF6113778"),
+        ),
+        (
+            "Testnet_task_issuer",
+            String::from("0x040aA11898c940FAa11A5bc8458B125ef8d34686"),
         ),
         (
             "callback_address",
@@ -433,10 +437,14 @@ pub fn check_network_and_confirm_status(network: String) {
                 devnet_register_program_with_coprocessor();
             }
             DeploymentOptions::Testnet => {
-                println!("Sorry Testnet integration is not available at the moment!!",);
+                register_program_with_coprocessor(String::from(
+                    "https://cartesi-coprocessor-solver-dev.fly.dev",
+                ));
             }
             DeploymentOptions::Mainnet => {
-                register_program_with_coprocessor();
+                register_program_with_coprocessor(String::from(
+                    "https://cartesi-coprocessor-solver.fly.dev",
+                ));
             }
         }
     }
