@@ -231,7 +231,7 @@ fn run_carize_container() -> bool {
                 .to_str()
                 .expect("Failed to get current directory")
         ))
-        .arg("carize:latest")
+        .arg("ghcr.io/zippiehq/cartesi-carize:latest")
         .arg("/carize.sh")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -649,11 +649,20 @@ fn import_machine_for_devnet_operator() -> bool {
         );
         return true;
     } else {
-        eprintln!(
-            "{} {}",
-            "RESPONSE".red(),
-            String::from_utf8_lossy(&curl_status.stderr).red()
-        );
+        if String::from_utf8_lossy(&curl_status.stderr)
+            .contains(&String::from("Failed to connect to 127.0.0.1"))
+        {
+            println!(
+                "{}",
+                "Devnet container not running, run the stop and start devnet command!!".red()
+            );
+        } else {
+            eprintln!(
+                "{} {}",
+                "RESPONSE".red(),
+                String::from_utf8_lossy(&curl_status.stderr).red()
+            );
+        }
         return false;
     }
 }
