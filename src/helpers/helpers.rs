@@ -31,6 +31,21 @@ impl DeploymentOptions {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct UploadResponse {
+    pub upload_id: String,
+    pub presigned_url: String,
+}
+
+impl UploadResponse {
+    pub fn new(upload_id: String, presigned_url: String) -> Self {
+        UploadResponse {
+            upload_id,
+            presigned_url,
+        }
+    }
+}
+
 /// @notice Helper Function to check all the required dependencies are installed
 /// @returns a boolean value indicating whether or not all dependencies are installed
 pub fn check_dependencies_installed() -> bool {
@@ -239,8 +254,8 @@ pub fn check_deploymet_args(
 /// @notice action for the specified environment using the provided email.
 ///
 /// @param `network` A `String` representing the network environment to check. It should be one of "devnet", "testnet", or "mainnet".
-/// @param `email` A `String` containing the email address to be used for registration.
-pub fn check_registration_environment(network: String, email: String) {
+/// @param `email` A `String` containing the email address to be used for registration (only for mainnet).
+pub fn check_registration_environment(network: String, email: Option<String>) {
     let mut environment: Option<DeploymentOptions> = None;
 
     for option in all::<DeploymentOptions>().collect::<Vec<_>>() {
@@ -260,13 +275,17 @@ pub fn check_registration_environment(network: String, email: String) {
     if let Some(deployment_env) = environment {
         match deployment_env {
             DeploymentOptions::Devnet => {
-                devnet_register(email);
+                devnet_register();
             }
             DeploymentOptions::Testnet => {
-                testnet_register(email);
+                testnet_register();
             }
             DeploymentOptions::Mainnet => {
-                mainnet_register(email);
+                if let Some(email) = email {
+                    mainnet_register(email);
+                } else {
+                    println!("{}", "Please enter a valid email linked to your web3 storage profile, using the '--email' flag".red());
+                }
             }
         }
     }
@@ -434,7 +453,7 @@ pub fn check_network_and_confirm_status(network: String) {
     if let Some(deployment_env) = environment {
         match deployment_env {
             DeploymentOptions::Devnet => {
-                devnet_register_program_with_coprocessor();
+                devnet_register_program_with_coprocessor(None, None);
             }
             DeploymentOptions::Testnet => {
                 register_program_with_coprocessor(String::from(
