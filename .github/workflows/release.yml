@@ -54,7 +54,7 @@ jobs:
           fi
 
       - name: Upload Packaged Binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-packaged
           path: |
@@ -104,7 +104,7 @@ jobs:
           powershell Compress-Archive -Path dist/* -DestinationPath cartesi-coprocessor-${{ matrix.target }}.zip
 
       - name: Upload Packaged Binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-packaged
           path: |
