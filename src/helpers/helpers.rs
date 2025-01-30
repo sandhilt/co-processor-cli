@@ -1,5 +1,5 @@
 use crate::commands::deploy::deploy_contract;
-use crate::commands::register::{
+use crate::commands::publish::{
     devnet_register, devnet_register_program_with_coprocessor, mainnet_register,
     register_program_with_coprocessor, testnet_register,
 };
@@ -49,7 +49,7 @@ impl UploadResponse {
 /// @notice Helper Function to check all the required dependencies are installed
 /// @returns a boolean value indicating whether or not all dependencies are installed
 pub fn check_dependencies_installed() -> bool {
-    let required_tools = vec!["forge", "w3", "cartesi", "docker", "curl"];
+    let required_tools = vec!["forge", "cartesi", "docker", "curl"];
 
     for tool in &required_tools {
         if !check_installed(tool.to_string()).unwrap_or(false) {
