@@ -20,11 +20,11 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
     #[command(
-        about = "Build and run all necessary steps to register your program with co-processor"
+        about = "Build and run all necessary steps to register and publish your program with co-processor"
     )]
-    Register {
+    Publish {
         #[arg(short, long, help = "Your email address registered with Web3.Storage")]
-        email: String,
+        email: Option<String>,
 
         #[arg(
             short,
@@ -61,7 +61,7 @@ enum Commands {
         about = "Check the coprocessor solver for status of the program download process",
         long_about = "Check the coprocessor solver for status of the program download process"
     )]
-    CheckStatus {
+    PublishStatus {
         #[arg(
             short,
             long,
@@ -129,11 +129,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Ok(())
             }
 
-            Commands::Register { email, network } => {
+            Commands::Publish { email, network } => {
                 check_registration_environment(network, email);
                 Ok(())
             }
-            Commands::CheckStatus { network } => {
+            Commands::PublishStatus { network } => {
                 check_network_and_confirm_status(network);
                 Ok(())
             }
@@ -145,7 +145,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 rpc,
                 constructor_args,
             } => {
-                // let contract_path = check_contract_exists(&file_name);
                 check_deployment_environment(
                     network,
                     private_key,

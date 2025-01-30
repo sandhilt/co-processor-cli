@@ -36,10 +36,8 @@ cargo install --path .
   - Nonodo.
   - Docker.
   - Cartesi machine.
-  - Carize.
   - W3 (web3 storage CLI).
   - foundry.
-- You need to clone and build the Carize tool manually also before calling any of the commands.
 
 ## Usage
 
@@ -49,9 +47,9 @@ Run the CLI tool with:
 cartesi-coprocessor [COMMAND] [OPTIONS]
 ```
 
-### Commands
+## Commands
 
-#### Bootstrap a Project
+### Bootstrap a Project
 
 Initialize a new Foundry project with Cartesi base contracts:
 
@@ -59,22 +57,22 @@ Initialize a new Foundry project with Cartesi base contracts:
 cartesi-coprocessor create --dapp-name <project_name> --template <language template>
 ```
 
-#### Register a Co-Processor Program
+### Publish a Co-Processor Program
 
-Register your Cartesi co-processor program:
+Register and publish your Cartesi co-processor program:
 Note: this should be run in the directory for your Cartesi program not the base directory or the solidity contract directory
 
 ```bash
-cartesi-coprocessor register --email <w3 storage account email> --network <devnet, mainnet or testnet>
+cartesi-coprocessor publish --network <devnet, mainnet or testnet>
 ```
 
-### Check Status
+### Check Publish Status
 
 Checks with the coprocessor task issuer for the status of the machine download process:
 Note: this should be run in the directory for your Cartesi program not the base directory or the solidity contract directory
 
 ```bash
-cartesi-coprocessor check-status --network <devnet, mainnet or testnet>
+cartesi-coprocessor publish-status --network <devnet, mainnet or testnet>
 ```
 
 ### Deploy
@@ -140,7 +138,13 @@ cartesi-coprocessor start-devnet
 5. **Register the Program**
 
 ```bash
-cartesi-coprocessor register --email test@gmail.com --network devnet
+cartesi-coprocessor publish --network devnet
+```
+
+or
+
+```bash
+cartesi-coprocessor publish --email test@gmail.com --network mainnet
 ```
 
 6. **Check with the task manager to confirm your program has been sucessfully registered**
@@ -148,7 +152,7 @@ cartesi-coprocessor register --email test@gmail.com --network devnet
    Run the command to confirm that the coprocessor is ready to start running your program, this should be run from the same directory as your Cartesi program.
 
 ```bash
-cartesi-coprocessor check-status --network devnet
+cartesi-coprocessor publish-status --network devnet
 ```
 
 6. **Deply Solidity Contract**

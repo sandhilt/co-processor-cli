@@ -1,9 +1,14 @@
 use crate::helpers::helpers::{
     check_available_space, check_if_logged_in, get_machine_hash, get_spinner, read_file,
+    UploadResponse,
 };
 use colored::Colorize;
+use indicatif::ProgressBar;
+use reqwest::blocking::{multipart, Client};
+use reqwest::StatusCode;
 use std::env;
-use std::io::{BufRead, BufReader};
+use std::fs::File;
+use std::io::{BufRead, BufReader, Read};
 use std::process::{Command, Stdio};
 use std::{thread, time};
 
@@ -231,7 +236,7 @@ fn run_carize_container() -> bool {
                 .to_str()
                 .expect("Failed to get current directory")
         ))
-        .arg("carize:latest")
+        .arg("ghcr.io/zippiehq/cartesi-carize:latest")
         .arg("/carize.sh")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -497,30 +502,16 @@ pub fn mainnet_register(email: String) {
 }
 
 /// @notice Entry point function to chain all the different functions required to register a new program on mainnet
-/// @param email The email of your choice, to be linked if not already to web3 storage
-pub fn testnet_register(email: String) {
-    match check_if_logged_in(email.clone()) {
-        true => {}
-        false => {
-            let _is_logged_in = login(email.clone());
-        }
-    };
+pub fn testnet_register() {
     match build_program() {
         true => match run_carize_container() {
-            true => match check_and_create_space("cartesi-coprocessor-programs".to_string()) {
-                true => match check_and_upload() {
-                    true => {
-                        register_program_with_coprocessor(String::from(
-                            "https://cartesi-coprocessor-solver-dev.fly.dev",
-                        ));
-                    }
-                    false => return,
-                },
-                false => return,
+            true => match get_pre_signed_url(String::from(
+                "https://cartesi-coprocessor-solver-dev.fly.dev",
+            )) {
+                Some(_response) => return,
+                None => return,
             },
-            false => {
-                return;
-            }
+            false => return,
         },
         false => {
             return;
@@ -529,25 +520,11 @@ pub fn testnet_register(email: String) {
 }
 
 /// @notice Entry point function to chain all the different functions required to register a new program in devnet mode.
-/// @param email The email of your choice, to be linked if not already to web3 storage
-pub fn devnet_register(email: String) {
-    match check_if_logged_in(email.clone()) {
-        true => {}
-        false => {
-            let _is_logged_in = login(email.clone());
-        }
-    };
+pub fn devnet_register() {
     match build_program() {
         true => match run_carize_container() {
-            true => match check_and_create_space("cartesi-coprocessor-programs".to_string()) {
-                true => match check_and_upload() {
-                    true => match import_machine_for_devnet_operator() {
-                        true => devnet_register_program_with_coprocessor(),
-                        // true => println!("Completed"),
-                        false => return,
-                    },
-                    false => return,
-                },
+            true => match devnet_upload_car_file() {
+                true => return,
                 false => return,
             },
             false => {
@@ -561,7 +538,7 @@ pub fn devnet_register(email: String) {
 }
 
 /// @notice Function to call the co-processor task manager to register the machine, hash, grogram cid etc on Devnet.
-pub fn devnet_register_program_with_coprocessor() {
+pub fn devnet_register_program_with_coprocessor(spinner: Option<ProgressBar>, retries: Option<u8>) {
     let current_dir = env::current_dir().expect("Failed to get current directory");
     let output_cid = current_dir.join("output.cid");
     let output_size = current_dir.join("output.size");
@@ -595,12 +572,8 @@ pub fn devnet_register_program_with_coprocessor() {
         .expect("Failed to wait for curl command to finish");
 
     if curl_status.status.success() {
-        println!(
-            "✅ {}",
-            "Successfully sent request to co-processor.".green()
-        );
         let stdout = String::from_utf8_lossy(&curl_status.stdout);
-        println!("✅ {} {}", "RESPONSE::".green(), stdout.green());
+        check_and_recal_devnet_solver_register(stdout.to_string(), spinner, retries);
     } else {
         eprintln!("Failed to send POST request.");
         let stderr = String::from_utf8_lossy(&curl_status.stderr);
@@ -616,44 +589,320 @@ pub fn devnet_register_program_with_coprocessor() {
     }
 }
 
-/// @notice Function to call the import endpoint of the co-processor in devnet mode.
-/// @return boolean to symbolise the status of the process.
-fn import_machine_for_devnet_operator() -> bool {
+fn get_pre_signed_url(solver_url: String) -> Option<UploadResponse> {
+    let client = Client::new();
+    let res = client
+        .post(format!("{}/upload", solver_url))
+        .body("")
+        .send()
+        .expect("Failed to send request");
+
+    match res.status() {
+        StatusCode::OK => {
+            let json_body: serde_json::Value = res.json().expect("Failed to parse JSON response");
+            let upload_id = json_body
+                .get("upload_id")
+                .expect("Failed to parse upload ID")
+                .to_string();
+            let presigned_url = json_body
+                .get("presigned_url")
+                .expect("Failed to parse presigned URL")
+                .to_string();
+            let response = UploadResponse::new(upload_id.clone(), presigned_url.clone());
+            upload_to_presigned_url(response.clone(), solver_url.clone());
+            return Some(response);
+        }
+        _ => {
+            eprintln!(
+                "❌ {}",
+                "ERROR:: Failed to receive presigned url from solver".red()
+            );
+            return None;
+        }
+    }
+}
+
+fn upload_to_presigned_url(response: UploadResponse, solver_url: String) -> bool {
+    let car_file_name = "output.car";
+    // Get the current directory
     let current_dir = env::current_dir().expect("Failed to get current directory");
-    let car_file_path = current_dir.join("output.car");
-    let url = "http://127.0.0.1:5001/api/v0/dag/import";
 
-    let curl_status = Command::new("curl")
-        .arg("-X")
-        .arg("POST")
-        .arg("-F")
-        .arg(format!(
-            "file=@{}",
-            car_file_path
-                .to_str()
-                .expect("error converting path to string")
-        ))
-        .arg(url)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("Failed to import machine for local operator")
-        .wait_with_output()
-        .expect("Failed to wait for import machine command to finish");
+    // Build the full path to the CAR file
+    let car_file_path = current_dir.join(car_file_name);
 
-    if curl_status.status.success() {
-        println!(
-            "{} {}",
-            "RESPONSE::".green(),
-            String::from_utf8_lossy(&curl_status.stdout).green()
-        );
-        return true;
-    } else {
+    // Check if the file exists
+    if !car_file_path.exists() {
         eprintln!(
-            "{} {}",
-            "RESPONSE".red(),
-            String::from_utf8_lossy(&curl_status.stderr).red()
+            "{} The CAR file '{}' was not found in the current directory '{}'.",
+            "Error::".red(),
+            car_file_name,
+            current_dir.display()
         );
         return false;
+    }
+
+    // Convert the path to a string
+    let car_file = car_file_path
+        .to_str()
+        .expect("Failed to convert path to string");
+
+    // Open the file
+    let mut file = File::open(&car_file).expect("Failed to open file");
+
+    // Read the file content into a buffer
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer).expect("Failed to read file");
+
+    let spinner = get_spinner();
+    spinner.set_message("Uploading CAR file...");
+
+    let url = response.presigned_url[1..response.presigned_url.len() - 1].to_string();
+    let upload_id = response.upload_id[1..response.upload_id.len() - 1].to_string();
+
+    // Configure HTTP client with no timeout
+    let client = Client::builder()
+        .timeout(None)
+        .build()
+        .expect("Failed to build HTTP client");
+
+    let res = client
+        .put(&url)
+        .body(buffer)
+        .send()
+        .expect("Failed to send PUT request to presigned URL");
+
+    // Handle response
+    match res.status() {
+        StatusCode::OK | StatusCode::CREATED => {
+            spinner.finish_and_clear();
+            println!("✅ {}", "File uploaded successfully!".green());
+            publish_upload_id(upload_id, solver_url);
+            return true;
+        }
+        _ => {
+            spinner.finish_and_clear();
+            eprintln!(
+                "❌ Upload failed. Status: {}, Error: {}",
+                res.status(),
+                res.text().unwrap_or_else(|_| "Unknown error".to_string())
+            );
+            return false;
+        }
+    }
+}
+
+fn publish_upload_id(upload_id: String, solver_url: String) {
+    let spinner = get_spinner();
+    spinner.set_message("Publishing upload Id...");
+
+    let client = Client::new();
+    let response = client
+        .post(format!("{}/publish/{}", solver_url.clone(), upload_id))
+        .body("")
+        .send()
+        .expect("Failed to send POST request to publish upload ID");
+
+    if !response.status().is_success() {
+        spinner.finish_and_clear();
+        eprintln!("❌ {}", "Failed to publish upload ID:".red());
+    } else {
+        spinner.finish_and_clear();
+        println!("✅ {}", "Upload ID published successfully!".green());
+        check_publish_status(upload_id, None, None, solver_url);
+    }
+}
+
+fn check_publish_status(
+    upload_id: String,
+    spinner: Option<ProgressBar>,
+    retries: Option<u8>,
+    solver_url: String,
+) {
+    let client = Client::new();
+    let response = client
+        .get(format!(
+            "{}/publish_status/{}",
+            solver_url.clone(),
+            upload_id
+        ))
+        .send()
+        .expect("errorchecking status");
+
+    if !response.status().is_success() {
+        eprintln!("❌ {}", "Failed to check status: ".red());
+    } else {
+        let json_body: serde_json::Value = response.json().expect("Failed to parse JSON response");
+
+        let result = json_body["publish_results"]
+            .as_array()
+            .expect("Failed to parse JSON response")[0]
+            .clone();
+
+        let result_obj = serde_json::Value::from(result);
+        let response_body = result_obj["response_body"]
+            .as_str()
+            .expect("failed to get state");
+
+        if response_body.contains("upload_failed") | response_body.contains("dag_import_error") {
+            println!("❌ {}", "Publish failed, please check the logs".red());
+            return;
+        } else if response_body.contains("dag_importing_complete") {
+            if let Some(new_spinner) = spinner {
+                new_spinner.finish_and_clear();
+            }
+            println!("✅ {}", "DAG imported successfully!".green());
+            register_program_with_coprocessor(solver_url.clone());
+            return;
+        } else {
+            std::thread::sleep(time::Duration::from_secs(5));
+
+            let mut retries_count: u8 = 0;
+
+            if let Some(retries) = retries {
+                if retries >= 5 {
+                    println!(
+                        "❌ {} {} {}",
+                        "Solver failed to finish setup after ".red(),
+                        retries,
+                        "retries".red()
+                    );
+                    return;
+                }
+                retries_count = retries;
+            }
+
+            if let Some(mut new_spinner) = spinner {
+                new_spinner.finish_and_clear();
+                new_spinner = get_spinner();
+                new_spinner.set_message("Waiting for solver to finish publication process...");
+
+                check_publish_status(
+                    upload_id,
+                    Some(new_spinner),
+                    Some(retries_count + 1),
+                    solver_url.clone(),
+                );
+            } else {
+                let new_spinner = get_spinner();
+                new_spinner.set_message("Waiting for solver to finish publication process...");
+                check_publish_status(
+                    upload_id,
+                    Some(new_spinner),
+                    Some(retries_count + 1),
+                    solver_url.clone(),
+                );
+            }
+        }
+    }
+}
+
+/// @notice Function to call the import endpoint of the co-processor solver in devnet mode.
+/// @return boolean to symbolise the status of the process.
+fn devnet_upload_car_file() -> bool {
+    let car_file_name = "output.car";
+    // Get the current directory
+    let current_dir = env::current_dir().expect("Failed to get current directory");
+
+    // Build the full path to the CAR file
+    let car_file_path = current_dir.join(car_file_name);
+
+    // Check if the file exists
+    if !car_file_path.exists() {
+        eprintln!(
+            "{} The CAR file '{}' was not found in the current directory '{}'.",
+            "Error::".red(),
+            car_file_name,
+            current_dir.display()
+        );
+        return false;
+    }
+
+    // Convert the path to a string
+    let car_file = car_file_path
+        .to_str()
+        .expect("Failed to convert path to string");
+
+    let url = "http://127.0.0.1:5001/api/v0/dag/import";
+
+    let form = multipart::Form::new()
+        .file("file", car_file)
+        .expect("unable to create form");
+
+    let spinner = get_spinner();
+    spinner.set_message("Uploading CAR file...");
+
+    let client = Client::new();
+    let res = client.post(url).multipart(form).send();
+
+    match res {
+        Ok(response) => {
+            if response.status().is_success() {
+                spinner.finish_and_clear();
+                println!("✅ {}", "File uploaded successfully!".green());
+                devnet_register_program_with_coprocessor(None, None);
+                return true;
+            } else {
+                spinner.finish_and_clear();
+                println!(
+                    "Error uploading file: {}",
+                    response.text().expect("Error unwrapping response")
+                );
+                return false;
+            }
+        }
+        Err(e) => {
+            spinner.finish_and_clear();
+            if e.to_string()
+                .contains("request or response body error for url")
+            {
+                println!(
+                    "❌ {}",
+                    "Devnet container inactive, Please run the start-devnet command then try again!"
+                        .red()
+                );
+            }
+            return false;
+        }
+    }
+}
+
+fn check_and_recal_devnet_solver_register(
+    response: String,
+    spinner: Option<ProgressBar>,
+    retries: Option<u8>,
+) {
+    if response.contains("ready") {
+        println!("✅ {}", "Successfully published your program".green());
+        println!("✅ {} {}", "RESPONSE::".green(), response.green());
+        return;
+    } else {
+        std::thread::sleep(time::Duration::from_secs(5));
+        let mut retries_count: u8 = 0;
+
+        if let Some(retries) = retries {
+            if retries >= 5 {
+                println!(
+                    "❌ {} {} {}",
+                    "Solver failed to finish setup after ".red(),
+                    retries,
+                    "retries".red()
+                );
+                println!("{}", response.red());
+                return;
+            }
+            retries_count = retries;
+        }
+
+        if let Some(mut new_spinner) = spinner {
+            new_spinner.finish_and_clear();
+            new_spinner = get_spinner();
+            new_spinner.set_message("Waiting for solver to finish publication process...");
+
+            devnet_register_program_with_coprocessor(Some(new_spinner), Some(retries_count + 1));
+        } else {
+            let new_spinner = get_spinner();
+            new_spinner.set_message("Waiting for solver to finish publication process...");
+            devnet_register_program_with_coprocessor(Some(new_spinner), Some(retries_count + 1));
+        }
     }
 }
