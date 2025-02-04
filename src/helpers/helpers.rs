@@ -402,24 +402,8 @@ pub fn address_book() {
             String::from("0x040aA11898c940FAa11A5bc8458B125ef8d34686"),
         ),
         (
-            "callback_address",
-            String::from("0x95401dc811bb5740090279Ba06cfA8fcF6113778"),
-        ),
-        (
             "payment_token",
             String::from("0xc5a5C42992dECbae36851359345FE25997F5C42d"),
-        ),
-        (
-            "l2Sender",
-            String::from("0x82e01223d51Eb87e16A03E24687EDF0F294da6f1"),
-        ),
-        (
-            "l2_coprocessor_address",
-            String::from("0xCD8a1C3ba11CF5ECfa6267617243239504a98d90"),
-        ),
-        (
-            "l1_coprocessor_address",
-            String::from("0x7969c5eD335650692Bc04293B07F5BF2e7A673C0"),
         ),
     ];
 

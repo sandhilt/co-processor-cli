@@ -36,7 +36,6 @@ cargo install --path .
   - Nonodo.
   - Docker.
   - Cartesi machine.
-  - W3 (web3 storage CLI).
   - foundry.
 
 ## Usage

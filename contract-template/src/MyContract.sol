@@ -4,8 +4,8 @@ pragma solidity ^0.8.28;
 import "../lib/coprocessor-base-contract/src/CoprocessorAdapter.sol";
 
 contract MyContract is CoprocessorAdapter {
-    constructor(address _coprocessorAddress, bytes32 _machineHash)
-        CoprocessorAdapter(_coprocessorAddress, _machineHash)
+    constructor(address _taskIssuerAddress, bytes32 _machineHash)
+        CoprocessorAdapter(_taskIssuerAddress, _machineHash)
     {}
 
     function runExecution(bytes calldata input) external {
