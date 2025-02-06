@@ -1,7 +1,9 @@
 use crate::helpers::helpers::get_spinner;
 use colored::Colorize;
+use std::env;
 use std::fs;
 use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{thread, time};
 
@@ -56,19 +58,9 @@ pub fn start_devnet() {
 
 /// @notice Function to clone the cartesi-coprocessor repository into a specified repo on host machine
 fn clone_coprocessor_repo() -> Option<String> {
-    // Get the directory where the CLI executable resides
-    let exe_dir = std::env::current_exe()
-        .expect("Failed to get the path of the current executable")
-        .parent()
-        .expect("Failed to get the parent directory of the executable")
-        .to_path_buf();
-
-    // Path to the cartesi-coprocessor folder relative to the CLI tool's directory
-    let copro_path = exe_dir.join("cartesi-coprocessor-repo");
-    let path = copro_path
-        .to_str()
-        .expect("Unable to decode path to co-processor")
-        .to_string();
+    // Get the directory path to clone the cartesi-coprocessor repository
+    let home_dir = env::var("HOME").expect("Failed to get HOME directory");
+    let copro_path = PathBuf::from(home_dir).join(".cartesi-coprocessor-repo");
 
     // Check if the folder exists
     if !copro_path.exists() {
@@ -76,9 +68,18 @@ fn clone_coprocessor_repo() -> Option<String> {
             "Creating directory for Cartesi-Coprocessor at {:?}",
             copro_path
         );
-        fs::create_dir_all(&copro_path)
-            .expect("Failed to create directory for Cartesi-Coprocessor");
+        if let Err(e) = fs::create_dir_all(&copro_path) {
+            eprintln!("❌ Failed to create directory: {:?}", e);
+            return None;
+        } else {
+            println!("✅ Repository path: {:?}", copro_path);
+        }
     }
+
+    let path = copro_path
+        .to_str()
+        .expect("Error converting path to String")
+        .to_string();
 
     // Check if the repository is already cloned
     let git_dir = copro_path.join(".git");
@@ -108,10 +109,12 @@ fn clone_coprocessor_repo() -> Option<String> {
         println!(
             "✅ {} {:?}",
             "Successfully cloned Cartesi-Coprocessor repository into".green(),
-            format!("{:?}", copro_path).green()
+            format!("{:?}", copro_path)
         );
-        update_submodules(path.clone());
-        return Some(path.clone());
+        match update_submodules(path.clone()) {
+            true => return Some(path.clone()),
+            false => return None,
+        }
     } else {
         eprintln!("❌ Failed to clone Cartesi-Coprocessor repository.");
         let stderr = String::from_utf8_lossy(&clone_status.stderr);
@@ -178,7 +181,7 @@ fn pull_latest_changes(path: String) {
 }
 /// @notice Function to update submodules contained in the coprocessor repository
 /// @param path The path to the local coprocessor repository
-fn update_submodules(path: String) {
+fn update_submodules(path: String) -> bool {
     let mut update_status = Command::new("git")
         .arg("submodule")
         .arg("update")
@@ -229,15 +232,16 @@ fn update_submodules(path: String) {
         {
             if status.success() {
                 println!("✅  Successfully updated submodules.");
-                return;
+                return true;
             } else {
                 eprintln!("❌ Failed to update submodules.");
-                return;
+                return false;
             }
         }
 
         thread::sleep(time::Duration::from_secs(5));
     }
+    return false;
 }
 
 /// @notice Function to Stop a currently running local dev network containers for the coprocessor
