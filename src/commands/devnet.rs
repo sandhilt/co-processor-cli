@@ -12,40 +12,51 @@ pub fn start_devnet() {
     let coprocessor_path = clone_coprocessor_repo();
     match coprocessor_path {
         Some(path) => {
-            build_container(path.clone());
-            pull_container(path.clone());
-            let spinner = get_spinner();
-            spinner.set_message("Starting devnet containers...");
+            if change_branch(path.clone()) == true {
+                match update_submodules(path.clone()) {
+                    true => {
+                        if build_container(path.clone()) == true
+                            && pull_container(path.clone()) == true
+                        {
+                            let spinner = get_spinner();
+                            spinner.set_message("Starting devnet containers...");
 
-            // Run Cartesi-Coprocessor in the background
-            let docker_status = Command::new("docker")
-                .arg("compose")
-                .arg("-f")
-                .arg("docker-compose-devnet.yaml")
-                .arg("up")
-                .arg("--wait")
-                .arg("-d")
-                .current_dir(path)
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn()
-                .expect("Failed to start Cartesi-Coprocessor devnet environment")
-                .wait_with_output()
-                .expect("Failed to complete git status check");
+                            // Run Cartesi-Coprocessor in the background
+                            let docker_status = Command::new("docker")
+                                .arg("compose")
+                                .arg("-f")
+                                .arg("docker-compose-devnet.yaml")
+                                .arg("up")
+                                .arg("--wait")
+                                .arg("-d")
+                                .current_dir(path)
+                                .stdout(Stdio::piped())
+                                .stderr(Stdio::piped())
+                                .spawn()
+                                .expect("Failed to start Cartesi-Coprocessor devnet environment")
+                                .wait_with_output()
+                                .expect("Failed to complete git status check");
 
-            if docker_status.status.success() {
-                spinner.finish_and_clear();
-                println!(
-                    "✅ {}",
-                    "Cartesi-Coprocessor devnet environment started.".green()
-                )
+                            if docker_status.status.success() {
+                                spinner.finish_and_clear();
+                                println!(
+                                    "✅ {}",
+                                    "Cartesi-Coprocessor devnet environment started.".green()
+                                )
+                            } else {
+                                spinner.finish_and_clear();
+                                eprintln!(
+                                    "{} \n{}",
+                                    "❌ Failed to start devnet containers:".red(),
+                                    String::from_utf8_lossy(&docker_status.stderr).red()
+                                );
+                                return;
+                            }
+                        }
+                    }
+                    false => return,
+                };
             } else {
-                spinner.finish_and_clear();
-                eprintln!(
-                    "{} \n{}",
-                    "❌ Failed to start devnet containers:".red(),
-                    String::from_utf8_lossy(&docker_status.stderr).red()
-                );
                 return;
             }
         }
@@ -111,10 +122,7 @@ fn clone_coprocessor_repo() -> Option<String> {
             "Successfully cloned Cartesi-Coprocessor repository into".green(),
             format!("{:?}", copro_path)
         );
-        match update_submodules(path.clone()) {
-            true => return Some(path.clone()),
-            false => return None,
-        }
+        return Some(path.clone());
     } else {
         eprintln!("❌ Failed to clone Cartesi-Coprocessor repository.");
         let stderr = String::from_utf8_lossy(&clone_status.stderr);
@@ -293,7 +301,7 @@ pub fn stop_devnet() {
 
 /// @notice Function to build containers for the coprocessor
 /// @param path The path to the local coprocessor repository
-fn build_container(path: String) {
+fn build_container(path: String) -> bool {
     let spinner = get_spinner();
     spinner.set_message("Building devnet containers...");
 
@@ -313,17 +321,27 @@ fn build_container(path: String) {
     if pull_status.status.success() {
         spinner.finish_and_clear();
         println!("✅ {}", "Successfully built Devnet containers.".green());
+        return true;
     } else {
         spinner.finish_and_clear();
         eprintln!("❌ Failed to build containers.");
         let stderr = String::from_utf8_lossy(&pull_status.stderr);
-        println!("{} {}", "DOCKER::RESPONSE::".red(), stderr.red());
+        if stderr.contains("Is the docker daemon running") {
+            println!(
+                "❌ {}",
+                "Docker daemon is not running. Please start it and try again.".red()
+            );
+            return false;
+        } else {
+            println!("{} {}", "DOCKER::RESPONSE::".red(), stderr.red());
+            return false;
+        }
     }
 }
 
 /// @notice Function to pull updates to the coprocessor containers
 /// @param path The path to the local coprocessor repository
-fn pull_container(path: String) {
+fn pull_container(path: String) -> bool {
     let spinner = get_spinner();
     spinner.set_message("Pulling changes to devnet containers...");
 
@@ -346,10 +364,106 @@ fn pull_container(path: String) {
             "✅ {}",
             "Successfully pulled changes to Devnet containers.".green()
         );
+        return true;
     } else {
         spinner.finish_and_clear();
         eprintln!("❌ Failed to pull changes to containers.");
         let stderr = String::from_utf8_lossy(&pull_status.stderr);
         println!("{} {}", "DOCKER::RESPONSE::".red(), stderr.red());
+        return false;
+    }
+}
+
+/// @notice Function to create, pull and change the coprocessor working branch to origin/release
+/// @param path The path to the cloned coprocessor repo on user's local machine
+/// @return true if the change was successful else false
+fn change_branch(path: String) -> bool {
+    let checkout_status = Command::new("git")
+        .arg("checkout")
+        .arg("-b")
+        .arg("release")
+        .arg("origin/release")
+        .current_dir(path.clone())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute git checkout command")
+        .wait_with_output()
+        .expect("Failed to complete git checkout");
+
+    if checkout_status.status.success() {
+        println!("✅ Switched to release branch 'origin/release'");
+        return true;
+    } else {
+        let stderr = String::from_utf8_lossy(&checkout_status.stderr);
+        if stderr.contains("'release' already exists") {
+            // println!("�� Release branch 'origin/release' already exists.");
+            if check_active_branch(path.clone()) == true {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            eprintln!("❌ Failed to checkout 'release' branch!");
+            return false;
+        }
+    }
+}
+
+/// @notice Function to check the active branch on the local coprocessor repository
+/// @param path The path to the cloned coprocessor repo on user's local machine
+/// @return true if the origin/release branch is active else false
+fn check_active_branch(path: String) -> bool {
+    let checkout_status = Command::new("git")
+        .arg("rev-parse")
+        .arg("--abbrev-ref")
+        .arg("HEAD")
+        .current_dir(path.clone())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute check active branch command")
+        .wait_with_output()
+        .expect("Failed to complete check active branch command");
+
+    if checkout_status.status.success() {
+        let std_out = String::from_utf8_lossy(&checkout_status.stdout);
+        if std_out.contains("release") {
+            return true;
+        } else {
+            // eprintln!("�� Failed to check active branch");
+            if checkout_release_branch(path.clone()) == true {
+                return true;
+            } else {
+                return false;
+            }
+        }
+    } else {
+        eprintln!("❌ Failed to check active branch");
+        return false;
+    }
+}
+
+/// @notice Function to simply change the active branch to the origin/releases branch
+/// @param path The path to the cloned coprocessor repo on user's local machine
+/// @return true if the origin/release branch is active else false
+fn checkout_release_branch(path: String) -> bool {
+    let checkout_status = Command::new("git")
+        .arg("checkout")
+        .arg("release")
+        .current_dir(path.clone())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute git fetch command")
+        .wait_with_output()
+        .expect("Failed to complete git checkout");
+
+    if checkout_status.status.success() {
+        println!("✅ Switched to release branch 'release'");
+        return true;
+    } else {
+        eprintln!("❌ Failed to checkout 'release' branch!");
+        return false;
     }
 }

@@ -1,6 +1,6 @@
 use crate::helpers::helpers::{
-    check_available_space, check_if_logged_in, get_machine_hash, get_spinner, read_file,
-    UploadResponse,
+    check_available_space, check_if_logged_in, display_machine_hash, get_machine_hash, get_spinner,
+    read_file, UploadResponse,
 };
 use colored::Colorize;
 use indicatif::ProgressBar;
@@ -330,8 +330,10 @@ pub fn register_program_with_coprocessor(base_url: String) {
 
     if curl_status.status.success() {
         println!(
-            "✅ {}",
-            "Successfully sent request to co-processor.".green()
+            "✅ {} {} {}",
+            "Successfully sent request to co-processor.".green(),
+            "for program".green(),
+            machine_hash.green()
         );
         let stdout = String::from_utf8_lossy(&curl_status.stdout);
         println!("✅ {} {}", "RESPONSE::".green(), stdout.green());
@@ -506,7 +508,7 @@ pub fn testnet_register() {
     match build_program() {
         true => match run_carize_container() {
             true => match get_pre_signed_url(String::from(
-                "https://cartesi-coprocessor-solver-dev.fly.dev",
+                "https://cartesi-coprocessor-solver-prod.fly.dev/",
             )) {
                 Some(_response) => return,
                 None => return,
@@ -538,6 +540,7 @@ pub fn devnet_register() {
 }
 
 /// @notice Function to call the co-processor task manager to register the machine, hash, grogram cid etc on Devnet.
+/// @param spinner This is an instance of a spinner displayed to users to signify the running process.
 pub fn devnet_register_program_with_coprocessor(spinner: Option<ProgressBar>, retries: Option<u8>) {
     let current_dir = env::current_dir().expect("Failed to get current directory");
     let output_cid = current_dir.join("output.cid");
@@ -589,6 +592,9 @@ pub fn devnet_register_program_with_coprocessor(spinner: Option<ProgressBar>, re
     }
 }
 
+/// @notice Function to get a presigned url where car files are to be uploaded from the solver
+/// @param solver_url this is the url link of the solver on devnet
+/// @return an Option containing either the presigned url or None
 fn get_pre_signed_url(solver_url: String) -> Option<UploadResponse> {
     let client = Client::new();
     let res = client
@@ -622,6 +628,10 @@ fn get_pre_signed_url(solver_url: String) -> Option<UploadResponse> {
     }
 }
 
+/// @notice Function to upload the car file to the presigned url
+/// @param response A struct containing the presigned url as well as an upload Id.
+/// @param solver_url this is the url link of the solver on devnet
+/// @return true if successful else false
 fn upload_to_presigned_url(response: UploadResponse, solver_url: String) -> bool {
     let car_file_name = "output.car";
     // Get the current directory
@@ -691,6 +701,9 @@ fn upload_to_presigned_url(response: UploadResponse, solver_url: String) -> bool
     }
 }
 
+/// @notice Function to call the solver and publish the upload Id so it can start downloading the previously uploaded car file
+/// @param solver_url this is the url link of the solver on devnet
+/// @param upload_id this is the Id of the upload gotten from the get_pre_signed_url function
 fn publish_upload_id(upload_id: String, solver_url: String) {
     let spinner = get_spinner();
     spinner.set_message("Publishing upload Id...");
@@ -712,6 +725,12 @@ fn publish_upload_id(upload_id: String, solver_url: String) {
     }
 }
 
+/// @notice Function to check the status of the upload_id publish process it contains a loop to recheck the status 5 times
+/// before finally breaking if it does not receive a possitive response
+/// @param solver_url this is the url link of the solver on devnet
+/// @param upload_id this is the Id of the upload gotten from the get_pre_signed_url function
+/// @param retries this tracks the number of times the recursion has happened so we dont exceed 5
+/// @param spinner This is an instance of a spinner displayed to users to signify the running process.
 fn check_publish_status(
     upload_id: String,
     spinner: Option<ProgressBar>,
@@ -866,13 +885,28 @@ fn devnet_upload_car_file() -> bool {
     }
 }
 
+/// @notice This function is a recursive function that checks the status of devnet_register_program_with_coprocessor function and
+/// recalls the function for a maximum of 5 times with a 5 seconds interval if a positive result is not obtained from the devnet_register_program_with_coprocessor function.
+/// @param response This is the response gotten from the devnet_register_program_with_coprocessor function
+/// @param retries this tracks the number of times the recursion has happened so we dont exceed 5
+/// @param spinner This is an instance of a spinner displayed to users to signify the running process.
 fn check_and_recal_devnet_solver_register(
     response: String,
     spinner: Option<ProgressBar>,
     retries: Option<u8>,
 ) {
     if response.contains("ready") {
-        println!("✅ {}", "Successfully published your program".green());
+        let possible_machine_hash = display_machine_hash();
+        if let Some(machine_hash) = possible_machine_hash {
+            println!(
+                "✅ {} {} {}",
+                "Successfully published your program".green(),
+                "with machine hash".green(),
+                machine_hash.green()
+            );
+        } else {
+            println!("✅ {}", "Successfully published your program".green());
+        }
         println!("✅ {} {}", "RESPONSE::".green(), response.green());
         return;
     } else {

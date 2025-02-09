@@ -399,7 +399,7 @@ pub fn address_book() {
         ),
         (
             "Testnet_task_issuer",
-            String::from("0x040aA11898c940FAa11A5bc8458B125ef8d34686"),
+            String::from("0xff35E413F5e22A9e1Cc02F92dcb78a5076c1aaf3"),
         ),
         (
             "payment_token",
@@ -441,7 +441,7 @@ pub fn check_network_and_confirm_status(network: String) {
             }
             DeploymentOptions::Testnet => {
                 register_program_with_coprocessor(String::from(
-                    "https://cartesi-coprocessor-solver-dev.fly.dev",
+                    "https://cartesi-coprocessor-solver-prod.fly.dev/",
                 ));
             }
             DeploymentOptions::Mainnet => {
