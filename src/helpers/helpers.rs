@@ -441,7 +441,7 @@ pub fn check_network_and_confirm_status(network: String) {
             }
             DeploymentOptions::Testnet => {
                 register_program_with_coprocessor(String::from(
-                    "https://cartesi-coprocessor-solver-prod.fly.dev/",
+                    "https://cartesi-coprocessor-solver-prod.fly.dev",
                 ));
             }
             DeploymentOptions::Mainnet => {
