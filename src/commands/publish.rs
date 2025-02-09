@@ -508,7 +508,7 @@ pub fn testnet_register() {
     match build_program() {
         true => match run_carize_container() {
             true => match get_pre_signed_url(String::from(
-                "https://cartesi-coprocessor-solver-prod.fly.dev/",
+                "https://cartesi-coprocessor-solver-prod.fly.dev",
             )) {
                 Some(_response) => return,
                 None => return,
