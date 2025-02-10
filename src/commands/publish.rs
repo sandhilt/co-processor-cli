@@ -4,12 +4,14 @@ use crate::helpers::helpers::{
 };
 use colored::Colorize;
 use indicatif::ProgressBar;
+use reqwest::blocking::ClientBuilder;
 use reqwest::blocking::{multipart, Client};
 use reqwest::StatusCode;
 use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
 use std::process::{Command, Stdio};
+use std::time::Duration;
 use std::{thread, time};
 
 /// @notice Function to set the space where uploaded car files will be saved to
@@ -702,26 +704,33 @@ fn upload_to_presigned_url(response: UploadResponse, solver_url: String) -> bool
 }
 
 /// @notice Function to call the solver and publish the upload Id so it can start downloading the previously uploaded car file
+/// It has a set timeout of 300 seconds
 /// @param solver_url this is the url link of the solver on devnet
 /// @param upload_id this is the Id of the upload gotten from the get_pre_signed_url function
 fn publish_upload_id(upload_id: String, solver_url: String) {
     let spinner = get_spinner();
     spinner.set_message("Publishing upload Id...");
 
-    let client = Client::new();
+    let client = ClientBuilder::new()
+        .timeout(Duration::from_secs(300))
+        .build()
+        .expect("Failed to build Reqwest client");
+
     let response = client
         .post(format!("{}/publish/{}", solver_url.clone(), upload_id))
         .body("")
-        .send()
-        .expect("Failed to send POST request to publish upload ID");
+        .send();
 
-    if !response.status().is_success() {
-        spinner.finish_and_clear();
-        eprintln!("❌ {}", "Failed to publish upload ID:".red());
-    } else {
-        spinner.finish_and_clear();
-        println!("✅ {}", "Upload ID published successfully!".green());
-        check_publish_status(upload_id, None, None, solver_url);
+    match response {
+        Ok(res) if res.status().is_success() => {
+            spinner.finish_and_clear();
+            println!("✅ {}", "Upload ID published successfully!".green());
+            check_publish_status(upload_id, None, None, solver_url);
+        }
+        Ok(_) | Err(_) => {
+            spinner.finish_and_clear();
+            eprintln!("❌ {}", "Failed to publish upload ID:".red());
+        }
     }
 }
 
