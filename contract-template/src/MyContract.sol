@@ -8,7 +8,7 @@ contract MyContract is CoprocessorAdapter {
         CoprocessorAdapter(_taskIssuerAddress, _machineHash)
     {}
 
-    function runExecution(bytes calldata input) external {
+    function runExecution(bytes memory input) external {
         callCoprocessor(input);
     }
 
