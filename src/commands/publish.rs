@@ -1,6 +1,5 @@
 use crate::helpers::helpers::{
-    check_available_space, check_if_logged_in, display_machine_hash, get_machine_hash, get_spinner,
-    read_file, UploadResponse,
+    add_npm_home_dir_to_path, check_available_space, check_if_logged_in, display_machine_hash, get_machine_hash, get_spinner, read_file, UploadResponse
 };
 use colored::Colorize;
 use indicatif::ProgressBar;
@@ -188,6 +187,7 @@ fn build_program() -> bool {
     // Create a spinner and set the message
     let spinner = get_spinner();
     spinner.set_message("Building Cartesi Program...");
+    add_npm_home_dir_to_path().unwrap();
 
     let child = Command::new("cartesi")
         .arg("build")
@@ -199,19 +199,21 @@ fn build_program() -> bool {
         .wait_with_output()
         .expect("Failed to wait for forge command to finish");
 
-    if child.status.success() {
+    let have_suceess = child.status.success();
+
+    if have_suceess {
         spinner.finish_and_clear();
         let stdout = String::from_utf8_lossy(&child.stdout);
         println!("{} {}", "CARTESI::".green(), stdout.green());
         println!("✅ {}", "Cartesi Program built successfully.".green());
-        return true;
     } else {
         spinner.finish_and_clear();
         let stderr = String::from_utf8_lossy(&child.stderr);
         println!("{} {}", "CARTESI::".red(), stderr.red());
         eprintln!("{}", "build process failed.".red());
-        return false;
     }
+
+    have_suceess
 }
 
 /// @notice Function to run the Carize command to generate car files

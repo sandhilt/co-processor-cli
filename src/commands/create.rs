@@ -6,6 +6,8 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{thread, time};
 
+use crate::helpers::helpers::add_npm_home_dir_to_path;
+
 /// @notice Function to create a solidity contract template inheriting the base contract
 /// @param work_dir The path to the foundry project for the dapp
 fn create_contract_template(work_dir: &PathBuf) {
@@ -150,6 +152,9 @@ fn bootstrap_foundry(project_name: &str) {
 /// @param dapp_name The name of the project the name of choice for the project to be created
 /// @param template The programming language of choice, you'll be building in
 fn create_template(dapp_name: String, template: String) {
+    add_npm_home_dir_to_path().unwrap();
+
+
     let mut child = Command::new("cartesi")
         .arg("create")
         .arg(dapp_name.clone())

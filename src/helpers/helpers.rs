@@ -7,9 +7,10 @@ use colored::Colorize;
 use enum_iterator::{all, Sequence};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::env;
+use std::error::Error;
 use std::fs;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::Duration;
 use std::{thread, time};
@@ -451,4 +452,20 @@ pub fn check_network_and_confirm_status(network: String) {
             }
         }
     }
+}
+
+pub fn add_npm_home_dir_to_path() -> Result<(), Box<dyn Error>> {
+    if let Some(path) = env::var_os("PATH") {
+        let old_path = path.clone();
+        let mut paths = env::split_paths(&old_path).collect::<Vec<_>>();
+        let home = env::var("HOME").expect("Failed to get home directory");
+        let npm_path = format!("{}/.npm/bin", home);
+        paths.insert(0, PathBuf::from(npm_path));
+        let new_path = env::join_paths(paths).expect("Failed to join paths");
+        env::set_var("PATH", new_path);
+
+        return Ok(());
+    }
+
+    Err("Failed to add npm home directory to path".into())
 }
